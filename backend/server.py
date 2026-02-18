@@ -2432,13 +2432,15 @@ async def student_register(
     # Create student user
     password = registration_data.get("password", str(uuid.uuid4())[:8])
     student = User(
-        email=registration_data["email"],
-        name=registration_data["name"],
-        phone=registration_data.get("phone"),
-        role=UserRole.STUDENT,
-        university_id=university["id"],
-        password_hash=hash_password(password)
-    )
+    email=registration_data["email"],
+    name=registration_data["name"],
+    phone=registration_data.get("phone"),
+    role=UserRole.STUDENT,
+    university_id=university["id"],
+    person_id=f"STU-{uuid.uuid4().hex[:6].upper()}",  #auto create person_id
+    password_hash=hash_password(password)
+)
+
     
     await db.users.insert_one(student.model_dump())
     

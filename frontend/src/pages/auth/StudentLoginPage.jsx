@@ -1,41 +1,58 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { publicAPI } from '../../lib/api';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Alert, AlertDescription } from '../../components/ui/alert';
-import { useTheme } from '../../context/ThemeContext';
-import { Sun, Moon, GraduationCap } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { publicAPI } from "../../lib/api";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
+import { Alert, AlertDescription } from "../../components/ui/alert";
+import { useTheme } from "../../context/ThemeContext";
+import { Sun, Moon, GraduationCap } from "lucide-react";
 
 export default function StudentLoginPage() {
   const navigate = useNavigate();
   const { login, studentRegister, isAuthenticated, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  
+
   const [universities, setUniversities] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   // Login form
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
   // Register form
-  const [selectedUniversity, setSelectedUniversity] = useState('');
-  const [registerName, setRegisterName] = useState('');
-  const [registerEmail, setRegisterEmail] = useState('');
-  const [registerPhone, setRegisterPhone] = useState('');
-  const [registerPassword, setRegisterPassword] = useState('');
+  const [selectedUniversity, setSelectedUniversity] = useState("");
+  const [registerName, setRegisterName] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPhone, setRegisterPhone] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
 
   useEffect(() => {
-    if (isAuthenticated && user?.role === 'student') {
-      navigate('/student');
+    if (isAuthenticated && user?.role === "student") {
+      navigate("/student");
     }
   }, [isAuthenticated, user]);
 
@@ -48,25 +65,29 @@ export default function StudentLoginPage() {
       const response = await publicAPI.listUniversities();
       setUniversities(response.data.data || []);
     } catch (err) {
-      console.error('Failed to load universities:', err);
+      console.error("Failed to load universities:", err);
     }
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    
-    const result = await login({ email: loginEmail, password: loginPassword }, true);
-    
+    setError("");
+
+    const result = await login(
+      { email: loginEmail, password: loginPassword },
+      true,
+    );
+
     setLoading(false);
-    
+
     if (result.success) {
-      navigate('/student');
+      navigate("/student");
     } else {
-      const errorMsg = typeof result.error === 'string' 
-        ? result.error 
-        : result.error?.message || 'Login failed';
+      const errorMsg =
+        typeof result.error === "string"
+          ? result.error
+          : result.error?.message || "Login failed";
       setError(errorMsg);
     }
   };
@@ -74,32 +95,38 @@ export default function StudentLoginPage() {
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setSuccess('');
-    
+    setError("");
+    setSuccess("");
+
     if (!selectedUniversity) {
-      setError('Please select a university');
+      setError("Please select a university");
       setLoading(false);
       return;
     }
 
-    const selectedUni = universities.find(u => u.id === selectedUniversity);
-    
-    const result = await studentRegister({
-      name: registerName,
-      email: registerEmail,
-      phone: registerPhone,
-      password: registerPassword
-    }, selectedUni?.code);
-    
+    const selectedUni = universities.find((u) => u.id === selectedUniversity);
+
+    const result = await studentRegister(
+      {
+        registration_data: {
+          name: registerName,
+          email: registerEmail,
+          phone: registerPhone,
+          password: registerPassword,
+        },
+      },
+      selectedUni?.code,
+    );
+
     setLoading(false);
-    
+
     if (result.success) {
-      navigate('/student');
+      navigate("/student");
     } else {
-      const errorMsg = typeof result.error === 'string' 
-        ? result.error 
-        : result.error?.message || 'Registration failed';
+      const errorMsg =
+        typeof result.error === "string"
+          ? result.error
+          : result.error?.message || "Registration failed";
       setError(errorMsg);
     }
   };
@@ -113,9 +140,13 @@ export default function StudentLoginPage() {
           onClick={toggleTheme}
           data-testid="student-login-theme-toggle"
         >
-          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          {theme === "dark" ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
         </Button>
-        <Button variant="ghost" onClick={() => navigate('/')}>
+        <Button variant="ghost" onClick={() => navigate("/")}>
           Back to Home
         </Button>
       </div>
@@ -126,13 +157,19 @@ export default function StudentLoginPage() {
             <GraduationCap className="h-6 w-6 text-blue-600 dark:text-blue-400" />
           </div>
           <CardTitle className="text-2xl">Student Portal</CardTitle>
-          <CardDescription>Login or register to continue your application</CardDescription>
+          <CardDescription>
+            Login or register to continue your application
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login" data-testid="student-login-tab">Login</TabsTrigger>
-              <TabsTrigger value="register" data-testid="student-register-tab">Register</TabsTrigger>
+              <TabsTrigger value="login" data-testid="student-login-tab">
+                Login
+              </TabsTrigger>
+              <TabsTrigger value="register" data-testid="student-register-tab">
+                Register
+              </TabsTrigger>
             </TabsList>
 
             {error && (
@@ -181,7 +218,7 @@ export default function StudentLoginPage() {
                   disabled={loading}
                   data-testid="student-login-submit"
                 >
-                  {loading ? 'Signing in...' : 'Sign In'}
+                  {loading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
             </TabsContent>
@@ -190,8 +227,14 @@ export default function StudentLoginPage() {
               <form onSubmit={handleRegister} className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="university">Select University</Label>
-                  <Select value={selectedUniversity} onValueChange={setSelectedUniversity}>
-                    <SelectTrigger id="university" data-testid="register-university-select">
+                  <Select
+                    value={selectedUniversity}
+                    onValueChange={setSelectedUniversity}
+                  >
+                    <SelectTrigger
+                      id="university"
+                      data-testid="register-university-select"
+                    >
                       <SelectValue placeholder="Choose a university" />
                     </SelectTrigger>
                     <SelectContent>
@@ -261,7 +304,9 @@ export default function StudentLoginPage() {
                   disabled={loading}
                   data-testid="student-register-submit"
                 >
-                  {loading ? 'Creating Account...' : 'Create Account & Start Application'}
+                  {loading
+                    ? "Creating Account..."
+                    : "Create Account & Start Application"}
                 </Button>
               </form>
             </TabsContent>
@@ -269,11 +314,11 @@ export default function StudentLoginPage() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              University or Admin?{' '}
+              University or Admin?{" "}
               <Button
                 variant="link"
                 className="p-0 text-blue-600"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate("/login")}
                 data-testid="admin-login-link"
               >
                 Login here
