@@ -1,28 +1,40 @@
-import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
-import { Button } from '../ui/button';
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
+import { Button } from "../ui/button";
 import {
-  Home, FileText, Upload, ClipboardCheck, CreditCard, CheckCircle,
-  Building2, Menu, X, Sun, Moon, LogOut, User, MessageCircle
-} from 'lucide-react';
+  Home,
+  FileText,
+  Upload,
+  ClipboardCheck,
+  CreditCard,
+  CheckCircle,
+  Building2,
+  Menu,
+  X,
+  Sun,
+  Moon,
+  LogOut,
+  User,
+  MessageCircle,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+} from "../ui/dropdown-menu";
 
 const studentMenu = [
-  { icon: Home, label: 'Dashboard', path: '/student' },
-  { icon: FileText, label: 'My Application', path: '/student/application' },
-  { icon: Upload, label: 'Documents', path: '/student/documents' },
-  { icon: ClipboardCheck, label: 'Entrance Test', path: '/student/test' },
-  { icon: CreditCard, label: 'Fee Payment', path: '/student/payment' },
-  { icon: MessageCircle, label: 'My Queries', path: '/student/queries' },
-  { icon: Building2, label: 'Institution', path: '/student/institution' },
+  { icon: Home, label: "Dashboard", path: "/student" },
+  { icon: FileText, label: "My Application", path: "/student/application" },
+  { icon: Upload, label: "Documents", path: "/student/documents" },
+  { icon: ClipboardCheck, label: "Entrance Test", path: "/student/test" },
+  { icon: CreditCard, label: "Fee Payment", path: "/student/payment" },
+  { icon: MessageCircle, label: "My Queries", path: "/student/queries" },
+  { icon: Building2, label: "Institution", path: "/student/institution" },
 ];
 
 export function StudentLayout({ children }) {
@@ -34,7 +46,7 @@ export function StudentLayout({ children }) {
 
   const handleLogout = () => {
     logout();
-    navigate('/student/login');
+    navigate("/student/login");
   };
 
   return (
@@ -45,7 +57,7 @@ export function StudentLayout({ children }) {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <Link to="/student" className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-blue-600">UNIFY</span>
+                <span className="text-2xl font-bold text-blue-600">UNIFYI</span>
               </Link>
             </div>
 
@@ -59,8 +71,8 @@ export function StudentLayout({ children }) {
                     to={item.path}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                       isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                     }`}
                   >
                     <item.icon className="h-4 w-4" />
@@ -77,14 +89,22 @@ export function StudentLayout({ children }) {
                 onClick={toggleTheme}
                 data-testid="theme-toggle-btn"
               >
-                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2" data-testid="student-menu-btn">
+                  <Button
+                    variant="ghost"
+                    className="gap-2"
+                    data-testid="student-menu-btn"
+                  >
                     <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
-                      {user?.name?.[0]?.toUpperCase() || 'S'}
+                      {user?.name?.[0]?.toUpperCase() || "S"}
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
@@ -94,7 +114,10 @@ export function StudentLayout({ children }) {
                     <p className="text-sm text-slate-500">{user?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} data-testid="student-logout-btn">
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    data-testid="student-logout-btn"
+                  >
                     <LogOut className="h-4 w-4 mr-2" />
                     Logout
                   </DropdownMenuItem>
@@ -118,10 +141,17 @@ export function StudentLayout({ children }) {
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setMobileMenuOpen(false)}
+          />
           <div className="fixed inset-y-0 right-0 w-64 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 p-4">
             <div className="flex justify-end mb-4">
-              <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(false)}
+              >
                 <X className="h-5 w-5" />
               </Button>
             </div>
@@ -135,8 +165,8 @@ export function StudentLayout({ children }) {
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                       isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                     }`}
                   >
                     <item.icon className="h-5 w-5" />

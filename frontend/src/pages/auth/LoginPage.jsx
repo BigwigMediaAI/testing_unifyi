@@ -1,30 +1,42 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { publicAPI } from '../../lib/api';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Alert, AlertDescription } from '../../components/ui/alert';
-import { useTheme } from '../../context/ThemeContext';
-import { Sun, Moon, Building2 } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { publicAPI } from "../../lib/api";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { Alert, AlertDescription } from "../../components/ui/alert";
+import { useTheme } from "../../context/ThemeContext";
+import { Sun, Moon, Building2 } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isAuthenticated, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  
+
   const [universities, setUniversities] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  
+  const [error, setError] = useState("");
+
   // University Staff form
-  const [selectedUniversity, setSelectedUniversity] = useState('');
-  const [staffRole, setStaffRole] = useState('');
-  const [personId, setPersonId] = useState('');
-  const [staffPassword, setStaffPassword] = useState('');
+  const [selectedUniversity, setSelectedUniversity] = useState("");
+  const [staffRole, setStaffRole] = useState("");
+  const [personId, setPersonId] = useState("");
+  const [staffPassword, setStaffPassword] = useState("");
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -41,55 +53,56 @@ export default function LoginPage() {
       const response = await publicAPI.listUniversities();
       setUniversities(response.data.data || []);
     } catch (err) {
-      console.error('Failed to load universities:', err);
+      console.error("Failed to load universities:", err);
     }
   };
 
   const redirectBasedOnRole = (role) => {
     switch (role) {
-      case 'super_admin':
-        navigate('/admin');
+      case "super_admin":
+        navigate("/admin");
         break;
-      case 'university_admin':
-        navigate('/university');
+      case "university_admin":
+        navigate("/university");
         break;
-      case 'counselling_manager':
-        navigate('/counselling');
+      case "counselling_manager":
+        navigate("/counselling");
         break;
-      case 'counsellor':
-        navigate('/counsellor');
+      case "counsellor":
+        navigate("/counsellor");
         break;
       default:
-        navigate('/');
+        navigate("/");
     }
   };
 
   const handleUniversityLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    
+    setError("");
+
     if (!selectedUniversity || !staffRole || !personId || !staffPassword) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       setLoading(false);
       return;
     }
-    
+
     const result = await login({
       university_id: selectedUniversity,
       role: staffRole,
       person_id: personId,
-      password: staffPassword
+      password: staffPassword,
     });
-    
+
     setLoading(false);
-    
+
     if (result.success) {
       redirectBasedOnRole(result.user.role);
     } else {
-      const errorMsg = typeof result.error === 'string' 
-        ? result.error 
-        : result.error?.message || result.error?.detail || 'Login failed';
+      const errorMsg =
+        typeof result.error === "string"
+          ? result.error
+          : result.error?.message || result.error?.detail || "Login failed";
       setError(errorMsg);
     }
   };
@@ -103,9 +116,13 @@ export default function LoginPage() {
           onClick={toggleTheme}
           data-testid="login-theme-toggle"
         >
-          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          {theme === "dark" ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
         </Button>
-        <Button variant="ghost" onClick={() => navigate('/')}>
+        <Button variant="ghost" onClick={() => navigate("/")}>
           Back to Home
         </Button>
       </div>
@@ -116,10 +133,12 @@ export default function LoginPage() {
             <Building2 className="h-7 w-7 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="mb-2">
-            <span className="text-3xl font-bold text-blue-600">UNIFY</span>
+            <span className="text-3xl font-bold text-blue-600">UNIFYI</span>
           </div>
           <CardTitle className="text-2xl">University Portal</CardTitle>
-          <CardDescription>Sign in to access your university dashboard</CardDescription>
+          <CardDescription>
+            Sign in to access your university dashboard
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -131,7 +150,10 @@ export default function LoginPage() {
           <form onSubmit={handleUniversityLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="university">University</Label>
-              <Select value={selectedUniversity} onValueChange={setSelectedUniversity}>
+              <Select
+                value={selectedUniversity}
+                onValueChange={setSelectedUniversity}
+              >
                 <SelectTrigger id="university" data-testid="university-select">
                   <SelectValue placeholder="Select University" />
                 </SelectTrigger>
@@ -152,8 +174,12 @@ export default function LoginPage() {
                   <SelectValue placeholder="Select Role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="university_admin">University Admin</SelectItem>
-                  <SelectItem value="counselling_manager">Counselling Manager</SelectItem>
+                  <SelectItem value="university_admin">
+                    University Admin
+                  </SelectItem>
+                  <SelectItem value="counselling_manager">
+                    Counselling Manager
+                  </SelectItem>
                   <SelectItem value="counsellor">Counsellor</SelectItem>
                 </SelectContent>
               </Select>
@@ -188,17 +214,17 @@ export default function LoginPage() {
               disabled={loading}
               data-testid="university-login-btn"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
 
           <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Are you a student?{' '}
+              Are you a student?{" "}
               <Button
                 variant="link"
                 className="p-0 text-blue-600"
-                onClick={() => navigate('/student/login')}
+                onClick={() => navigate("/student/login")}
                 data-testid="student-login-link"
               >
                 Login here
