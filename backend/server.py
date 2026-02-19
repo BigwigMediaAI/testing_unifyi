@@ -840,7 +840,7 @@ async def create_staff(
 @university_router.get("/staff")
 async def list_staff(
     role: Optional[str] = None,
-    current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN, UserRole.COUNSELLING_MANAGER))
+    current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN, UserRole.COUNSELLING_MANAGER, UserRole.COUNSELLOR))
 ):
     """List university staff"""
     query = {
@@ -1382,7 +1382,7 @@ async def list_leads(
         "total": total,
         "page": page,
         "limit": limit,
-        "pages": (total + limit - 1) // limit
+        "pages": (total + limit - 1) 
     }
 
 
