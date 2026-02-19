@@ -45,6 +45,8 @@ from models.department import (
 from models.email_log import EmailLog, EmailType, EmailStatus
 from models.query import StudentQuery, QueryCreate, QueryReply, QueryUpdate, QueryStatus, QueryMessage
 from services.email_service import email_service
+from models.walkin import WalkIn, WalkInCreate, WalkInStatus
+
 
 
 ROOT_DIR = Path(__file__).parent
@@ -83,6 +85,8 @@ test_router = APIRouter(prefix="/tests", tags=["Tests"])
 student_router = APIRouter(prefix="/student", tags=["Student Portal"])
 email_router = APIRouter(prefix="/emails", tags=["Emails"])
 query_router = APIRouter(prefix="/queries", tags=["Student Queries"])
+walkin_router = APIRouter(prefix="/walkins", tags=["Walk-ins"])
+
 
 security = HTTPBearer()
 
@@ -182,6 +186,10 @@ async def startup_event():
     await db.leads.create_index([("university_id", 1), ("email", 1)])
     await db.leads.create_index([("university_id", 1), ("phone", 1)])
     await db.applications.create_index("application_number", unique=True)
+    await db.walkins.create_index([("university_id", 1), ("lead_id", 1)])
+    await db.walkins.create_index("student_id")
+    await db.walkins.create_index("counsellor_id")
+
     
     # Create super admin if not exists
     super_admin = await db.users.find_one({"email": "admin@unify.com"})
@@ -3388,6 +3396,43 @@ async def get_query_stats(
     }
 
 
+# ============== WALK IN ROUTES ==============
+@walkin_router.post("")
+async def create_walkin(
+    data: WalkInCreate,
+    current_user: dict = Depends(require_roles(UserRole.STUDENT))
+):
+    """Student requests campus visit"""
+
+    # 🔍 find lead of this student
+    lead = await db.leads.find_one({
+        "email": current_user["email"],
+        "university_id": current_user["university_id"]
+    })
+
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    if not lead.get("assigned_to"):
+        raise HTTPException(status_code=400, detail="No counsellor assigned")
+
+    walkin = WalkIn(
+        university_id=current_user["university_id"],
+        lead_id=lead["id"],
+        student_id=current_user["id"],
+        counsellor_id=lead["assigned_to"],
+        visit_date=data.visit_date,
+        visit_time=data.visit_time,
+        number_of_persons=data.number_of_persons,
+        reason=data.reason,
+    )
+
+    await db.walkins.insert_one(walkin.model_dump())
+
+    return {"message": "Walk-in request submitted"}
+
+
+
 # Include all routers
 api_router.include_router(auth_router)
 api_router.include_router(superadmin_router)
@@ -3400,6 +3445,8 @@ api_router.include_router(student_router)
 api_router.include_router(document_router)
 api_router.include_router(email_router)
 api_router.include_router(query_router)
+api_router.include_router(walkin_router)
+
 
 app.include_router(api_router)
 
