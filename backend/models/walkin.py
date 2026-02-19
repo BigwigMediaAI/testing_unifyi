@@ -42,3 +42,10 @@ class WalkInCreate(BaseModel):
     visit_time: str
     number_of_persons: int = Field(gt=0)
     reason: Optional[str] = None
+
+
+class WalkInUpdate(BaseModel):
+    status: WalkInStatus
+    counsellor_note: Optional[str] = None
+    visit_date: Optional[datetime] = None
+    visit_time: Optional[str] = None

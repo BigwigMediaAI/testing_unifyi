@@ -45,7 +45,7 @@ from models.department import (
 from models.email_log import EmailLog, EmailType, EmailStatus
 from models.query import StudentQuery, QueryCreate, QueryReply, QueryUpdate, QueryStatus, QueryMessage
 from services.email_service import email_service
-from models.walkin import WalkIn, WalkInCreate, WalkInStatus
+from models.walkin import WalkIn, WalkInCreate, WalkInStatus, WalkInUpdate
 
 
 
@@ -3430,6 +3430,85 @@ async def create_walkin(
     await db.walkins.insert_one(walkin.model_dump())
 
     return {"message": "Walk-in request submitted"}
+
+@api_router.get("/walkins/my")
+async def get_my_walkins(
+    current_user: dict = Depends(require_roles(UserRole.STUDENT))
+):
+    """Student: get own walk-in requests"""
+
+    walkins = await db.walkins.find(
+        {"student_id": current_user["id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+
+    return {"data": walkins}
+
+
+@api_router.get("/walkins")
+async def list_walkins_for_counsellor(
+    current_user: dict = Depends(
+        require_roles(
+            UserRole.COUNSELLOR,
+            UserRole.COUNSELLING_MANAGER,
+            UserRole.UNIVERSITY_ADMIN
+        )
+    )
+):
+    """Counsellor/Manager/Admin: view walk-ins"""
+
+    query = {"university_id": current_user["university_id"]}
+
+    # 🔒 counsellor restriction
+    if current_user["role"] == "counsellor":
+        query["counsellor_id"] = current_user["id"]
+
+    walkins = await db.walkins.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(200)
+
+    return {"data": walkins}
+
+
+@walkin_router.put("/{walkin_id}")
+async def update_walkin(
+    walkin_id: str,
+    data: WalkInUpdate,
+    current_user: dict = Depends(require_roles(UserRole.COUNSELLOR))
+):
+    """Counsellor updates walk-in status"""
+
+    walkin = await db.walkins.find_one({"id": walkin_id})
+
+    if not walkin:
+        raise HTTPException(status_code=404, detail="Walk-in not found")
+
+    # 🔒 SECURITY: only assigned counsellor
+    if walkin.get("counsellor_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not your walk-in request")
+
+    update_data = {
+        "status": data.status,
+        "updated_at": datetime.now(timezone.utc)
+    }
+
+    # optional fields
+    if data.counsellor_note is not None:
+        update_data["counsellor_note"] = data.counsellor_note
+
+    if data.visit_date is not None:
+        update_data["visit_date"] = data.visit_date
+
+    if data.visit_time is not None:
+        update_data["visit_time"] = data.visit_time
+
+    await db.walkins.update_one(
+        {"id": walkin_id},
+        {"$set": update_data}
+    )
+
+    return {"message": "Walk-in updated successfully"}
 
 
 
