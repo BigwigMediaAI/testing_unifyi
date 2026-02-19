@@ -1,45 +1,81 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AdminLayout } from '../../components/layouts/AdminLayout';
-import { leadAPI, universityAPI } from '../../lib/api';
-import { formatDateTime, LEAD_STAGES } from '../../lib/utils';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Badge } from '../../components/ui/badge';
-import { Checkbox } from '../../components/ui/checkbox';
-import { Plus, Search, Eye, UserPlus, Users, RefreshCw, Phone, Mail, Download } from 'lucide-react';
-import { toast } from 'sonner';
-import { ExportButton } from '../../components/ui/export-csv';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { AdminLayout } from "../../components/layouts/AdminLayout";
+import { leadAPI, universityAPI } from "../../lib/api";
+import { formatDateTime, LEAD_STAGES } from "../../lib/utils";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../../components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { Badge } from "../../components/ui/badge";
+import { Checkbox } from "../../components/ui/checkbox";
+import {
+  Plus,
+  Search,
+  Eye,
+  UserPlus,
+  Users,
+  RefreshCw,
+  Phone,
+  Mail,
+  Download,
+} from "lucide-react";
+import { toast } from "sonner";
+import { ExportButton } from "../../components/ui/export-csv";
 
 export default function LeadsPage() {
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [counsellors, setCounsellors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [stageFilter, setStageFilter] = useState('');
+  const [search, setSearch] = useState("");
+  const [stageFilter, setStageFilter] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showBulkReassignModal, setShowBulkReassignModal] = useState(false);
-  
+
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
-  const [selectedCounsellor, setSelectedCounsellor] = useState('');
-  
+  const [selectedCounsellor, setSelectedCounsellor] = useState("");
+
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    source: 'manual'
+    name: "",
+    email: "",
+    phone: "",
+    source: "manual",
   });
+
+  const user = JSON.parse(localStorage.getItem("unify-user"));
 
   useEffect(() => {
     loadData();
@@ -49,15 +85,20 @@ export default function LeadsPage() {
     try {
       setLoading(true);
       const [leadsRes, staffRes] = await Promise.all([
-        leadAPI.list({ page, limit: 20, search, stage: stageFilter || undefined }),
-        universityAPI.listStaff('counsellor')
+        leadAPI.list({
+          page,
+          limit: 20,
+          search,
+          stage: stageFilter || undefined,
+        }),
+        universityAPI.listStaff("counsellor"),
       ]);
       setLeads(leadsRes.data.data || []);
       setTotalPages(leadsRes.data.pages || 1);
       setCounsellors(staffRes.data.data || []);
     } catch (err) {
-      console.error('Failed to load data:', err);
-      toast.error('Failed to load leads');
+      console.error("Failed to load data:", err);
+      toast.error("Failed to load leads");
     } finally {
       setLoading(false);
     }
@@ -67,12 +108,12 @@ export default function LeadsPage() {
     e.preventDefault();
     try {
       await leadAPI.create(formData);
-      toast.success('Lead created successfully');
+      toast.success("Lead created successfully");
       setShowCreateModal(false);
-      setFormData({ name: '', email: '', phone: '', source: 'manual' });
+      setFormData({ name: "", email: "", phone: "", source: "manual" });
       loadData();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create lead');
+      toast.error(err.response?.data?.detail || "Failed to create lead");
     }
   };
 
@@ -80,13 +121,13 @@ export default function LeadsPage() {
     if (!selectedCounsellor || !selectedLead) return;
     try {
       await leadAPI.assign(selectedLead.id, selectedCounsellor);
-      toast.success('Lead assigned successfully');
+      toast.success("Lead assigned successfully");
       setShowAssignModal(false);
       setSelectedLead(null);
-      setSelectedCounsellor('');
+      setSelectedCounsellor("");
       loadData();
     } catch (err) {
-      toast.error('Failed to assign lead');
+      toast.error("Failed to assign lead");
     }
   };
 
@@ -95,23 +136,23 @@ export default function LeadsPage() {
     try {
       await leadAPI.bulkReassign({
         lead_ids: selectedLeads,
-        to_counsellor_id: selectedCounsellor
+        to_counsellor_id: selectedCounsellor,
       });
       toast.success(`${selectedLeads.length} leads reassigned successfully`);
       setShowBulkReassignModal(false);
       setSelectedLeads([]);
-      setSelectedCounsellor('');
+      setSelectedCounsellor("");
       loadData();
     } catch (err) {
-      toast.error('Failed to reassign leads');
+      toast.error("Failed to reassign leads");
     }
   };
 
   const toggleLeadSelection = (leadId) => {
-    setSelectedLeads(prev => 
-      prev.includes(leadId) 
-        ? prev.filter(id => id !== leadId)
-        : [...prev, leadId]
+    setSelectedLeads((prev) =>
+      prev.includes(leadId)
+        ? prev.filter((id) => id !== leadId)
+        : [...prev, leadId],
     );
   };
 
@@ -119,7 +160,7 @@ export default function LeadsPage() {
     if (selectedLeads.length === leads.length) {
       setSelectedLeads([]);
     } else {
-      setSelectedLeads(leads.map(l => l.id));
+      setSelectedLeads(leads.map((l) => l.id));
     }
   };
 
@@ -129,8 +170,12 @@ export default function LeadsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Leads</h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">Manage and track your leads</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+              Leads
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
+              Manage and track your leads
+            </p>
           </div>
           <div className="flex gap-2">
             {selectedLeads.length > 0 && (
@@ -168,14 +213,22 @@ export default function LeadsPage() {
                   data-testid="search-leads"
                 />
               </div>
-              <Select value={stageFilter || "all"} onValueChange={(v) => setStageFilter(v === "all" ? "" : v)}>
-                <SelectTrigger className="w-full sm:w-48" data-testid="stage-filter">
+              <Select
+                value={stageFilter || "all"}
+                onValueChange={(v) => setStageFilter(v === "all" ? "" : v)}
+              >
+                <SelectTrigger
+                  className="w-full sm:w-48"
+                  data-testid="stage-filter"
+                >
                   <SelectValue placeholder="All Stages" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Stages</SelectItem>
                   {Object.entries(LEAD_STAGES).map(([key, { label }]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -183,14 +236,14 @@ export default function LeadsPage() {
                 data={leads}
                 filename="leads"
                 columns={[
-                  { key: 'name', label: 'Name' },
-                  { key: 'email', label: 'Email' },
-                  { key: 'phone', label: 'Phone' },
-                  { key: 'source', label: 'Source' },
-                  { key: 'stage', label: 'Stage' },
-                  { key: 'assigned_to_name', label: 'Assigned To' },
-                  { key: 'created_at', label: 'Created At' },
-                  { key: 'updated_at', label: 'Updated At' }
+                  { key: "name", label: "Name" },
+                  { key: "email", label: "Email" },
+                  { key: "phone", label: "Phone" },
+                  { key: "source", label: "Source" },
+                  { key: "stage", label: "Stage" },
+                  { key: "assigned_to_name", label: "Assigned To" },
+                  { key: "created_at", label: "Created At" },
+                  { key: "updated_at", label: "Updated At" },
                 ]}
               />
             </div>
@@ -205,7 +258,10 @@ export default function LeadsPage() {
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox
-                      checked={selectedLeads.length === leads.length && leads.length > 0}
+                      checked={
+                        selectedLeads.length === leads.length &&
+                        leads.length > 0
+                      }
                       onCheckedChange={toggleSelectAll}
                       data-testid="select-all-checkbox"
                     />
@@ -229,7 +285,10 @@ export default function LeadsPage() {
                   </TableRow>
                 ) : leads.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                    <TableCell
+                      colSpan={7}
+                      className="text-center py-8 text-slate-500"
+                    >
                       <Users className="h-8 w-8 mx-auto mb-2 text-slate-400" />
                       No leads found
                     </TableCell>
@@ -244,8 +303,12 @@ export default function LeadsPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium text-slate-900 dark:text-white">{lead.name}</div>
-                        <div className="text-sm text-slate-500 capitalize">{lead.source}</div>
+                        <div className="font-medium text-slate-900 dark:text-white">
+                          {lead.name}
+                        </div>
+                        <div className="text-sm text-slate-500 capitalize">
+                          {lead.source}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-sm">
@@ -256,13 +319,19 @@ export default function LeadsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={LEAD_STAGES[lead.stage]?.color || 'bg-slate-100'}>
+                        <Badge
+                          className={
+                            LEAD_STAGES[lead.stage]?.color || "bg-slate-100"
+                          }
+                        >
                           {LEAD_STAGES[lead.stage]?.label || lead.stage}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         {lead.assigned_to_name || (
-                          <span className="text-slate-400 text-sm">Unassigned</span>
+                          <span className="text-slate-400 text-sm">
+                            Unassigned
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="text-slate-500 text-sm">
@@ -273,22 +342,27 @@ export default function LeadsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/counselling/leads/${lead.id}`)}
+                            onClick={() =>
+                              navigate(`/counselling/leads/${lead.id}`)
+                            }
                             data-testid={`view-${lead.id}`}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedLead(lead);
-                              setShowAssignModal(true);
-                            }}
-                            data-testid={`assign-${lead.id}`}
-                          >
-                            <UserPlus className="h-4 w-4" />
-                          </Button>
+                          {(user?.role === "university_admin" ||
+                            user?.role === "counselling_manager") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedLead(lead);
+                                setShowAssignModal(true);
+                              }}
+                              data-testid={`assign-${lead.id}`}
+                            >
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -305,7 +379,7 @@ export default function LeadsPage() {
             <Button
               variant="outline"
               disabled={page === 1}
-              onClick={() => setPage(p => p - 1)}
+              onClick={() => setPage((p) => p - 1)}
             >
               Previous
             </Button>
@@ -315,7 +389,7 @@ export default function LeadsPage() {
             <Button
               variant="outline"
               disabled={page === totalPages}
-              onClick={() => setPage(p => p + 1)}
+              onClick={() => setPage((p) => p + 1)}
             >
               Next
             </Button>
@@ -335,7 +409,9 @@ export default function LeadsPage() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     required
                     data-testid="lead-name-input"
                   />
@@ -346,7 +422,9 @@ export default function LeadsPage() {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     required
                     data-testid="lead-email-input"
                   />
@@ -356,14 +434,21 @@ export default function LeadsPage() {
                   <Input
                     id="phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
                     required
                     data-testid="lead-phone-input"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="source">Source</Label>
-                  <Select value={formData.source} onValueChange={(v) => setFormData({ ...formData, source: v })}>
+                  <Select
+                    value={formData.source}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, source: v })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -378,10 +463,18 @@ export default function LeadsPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCreateModal(false)}
+                >
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700" data-testid="submit-lead-btn">
+                <Button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="submit-lead-btn"
+                >
                   Create Lead
                 </Button>
               </DialogFooter>
@@ -399,22 +492,31 @@ export default function LeadsPage() {
               <p className="text-sm text-slate-600 mb-4">
                 Assign <strong>{selectedLead?.name}</strong> to a counsellor
               </p>
-              <Select value={selectedCounsellor} onValueChange={setSelectedCounsellor}>
+              <Select
+                value={selectedCounsellor}
+                onValueChange={setSelectedCounsellor}
+              >
                 <SelectTrigger data-testid="assign-counsellor-select">
                   <SelectValue placeholder="Select Counsellor" />
                 </SelectTrigger>
                 <SelectContent>
                   {counsellors.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowAssignModal(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowAssignModal(false)}
+              >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleAssign}
                 className="bg-blue-600 hover:bg-blue-700"
                 disabled={!selectedCounsellor}
@@ -427,31 +529,44 @@ export default function LeadsPage() {
         </Dialog>
 
         {/* Bulk Reassign Modal */}
-        <Dialog open={showBulkReassignModal} onOpenChange={setShowBulkReassignModal}>
+        <Dialog
+          open={showBulkReassignModal}
+          onOpenChange={setShowBulkReassignModal}
+        >
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Bulk Reassign Leads</DialogTitle>
             </DialogHeader>
             <div className="py-4">
               <p className="text-sm text-slate-600 mb-4">
-                Reassign <strong>{selectedLeads.length}</strong> selected leads to:
+                Reassign <strong>{selectedLeads.length}</strong> selected leads
+                to:
               </p>
-              <Select value={selectedCounsellor} onValueChange={setSelectedCounsellor}>
+              <Select
+                value={selectedCounsellor}
+                onValueChange={setSelectedCounsellor}
+              >
                 <SelectTrigger data-testid="bulk-reassign-counsellor-select">
                   <SelectValue placeholder="Select Counsellor" />
                 </SelectTrigger>
                 <SelectContent>
                   {counsellors.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowBulkReassignModal(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowBulkReassignModal(false)}
+              >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleBulkReassign}
                 className="bg-blue-600 hover:bg-blue-700"
                 disabled={!selectedCounsellor}
