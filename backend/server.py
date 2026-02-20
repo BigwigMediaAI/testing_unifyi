@@ -2773,54 +2773,122 @@ async def counselling_manager_dashboard(
 ):
     """Get counselling manager dashboard"""
     university_id = current_user["university_id"]
-    
+
+    # ==============================
     # Get counsellors
-    counsellors = await db.users.find({
-        "university_id": university_id,
-        "role": "counsellor"
-    }, {"_id": 0, "id": 1, "name": 1}).to_list(100)
-    
-    # Get lead counts by counsellor
+    # ==============================
+    counsellors = await db.users.find(
+        {
+            "university_id": university_id,
+            "role": "counsellor"
+        },
+        {"_id": 0, "id": 1, "name": 1}
+    ).to_list(100)
+
+    # ==============================
+    # Lead counts by counsellor
+    # ==============================
     pipeline = [
         {"$match": {"university_id": university_id}},
         {"$group": {"_id": "$assigned_to", "count": {"$sum": 1}}}
     ]
     leads_by_counsellor = await db.leads.aggregate(pipeline).to_list(100)
     leads_map = {item["_id"]: item["count"] for item in leads_by_counsellor}
-    
-    # Pending follow-ups
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # ==============================
+    # Pending follow-ups (overdue)
+    # ==============================
+    today = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+
     pipeline = [
         {"$match": {"university_id": university_id}},
         {"$unwind": "$follow_ups"},
-        {"$match": {
-            "follow_ups.is_completed": False,
-            "follow_ups.scheduled_at": {"$lte": today.isoformat()}
-        }},
+        {
+            "$match": {
+                "follow_ups.is_completed": False,
+                "follow_ups.scheduled_at": {"$lte": today.isoformat()}
+            }
+        },
         {"$group": {"_id": "$assigned_to", "overdue_count": {"$sum": 1}}}
     ]
     overdue_by_counsellor = await db.leads.aggregate(pipeline).to_list(100)
     overdue_map = {item["_id"]: item["overdue_count"] for item in overdue_by_counsellor}
-    
-    # Build counsellor stats
+
+    # ==============================
+    # Build counsellor stats (FRONTEND MATCH)
+    # ==============================
     counsellor_stats = []
     for c in counsellors:
         counsellor_stats.append({
             "id": c["id"],
             "name": c["name"],
-            "total_leads": leads_map.get(c["id"], 0),
+            "assigned_leads": leads_map.get(c["id"], 0),
+            "converted": 0,  # (optional: update if you track conversions per counsellor)
             "overdue_follow_ups": overdue_map.get(c["id"], 0)
         })
-    
-    # Unassigned leads
-    unassigned = await db.leads.count_documents({
+
+    # ==============================
+    # GLOBAL STATS (NEW — REQUIRED)
+    # ==============================
+
+    # Total leads
+    total_leads = await db.leads.count_documents({
+        "university_id": university_id
+    })
+
+    # Unassigned leads (your "new leads")
+    unassigned_leads = await db.leads.count_documents({
         "university_id": university_id,
         "assigned_to": None
     })
-    
+
+    # Converted leads (adjust status if needed)
+    converted_leads = await db.leads.count_documents({
+    "university_id": university_id,
+    "assigned_to": {"$ne": None}
+})
+
+
+    # Pending leads
+    pending_leads = await db.leads.count_documents({
+        "university_id": university_id,
+        "status": {"$ne": "converted"}
+    })
+
+    # Conversion rate
+    conversion_rate = (
+        (converted_leads / total_leads) * 100
+        if total_leads > 0 else 0
+    )
+
+    # ==============================
+    # Recent leads (NEW — REQUIRED)
+    # ==============================
+    recent_leads = await db.leads.find(
+        {"university_id": university_id},
+        {
+            "_id": 0,
+            "id": 1,
+            "name": 1,
+            "email": 1,
+            "source": 1,
+            "created_at": 1
+        }
+    ).sort("created_at", -1).limit(5).to_list(5)
+
+    # ==============================
+    # FINAL RESPONSE (FRONTEND READY)
+    # ==============================
     return {
+        "total_leads": total_leads,
+        "new_leads": unassigned_leads,
+        "converted_leads": converted_leads,
+        "pending_leads": pending_leads,
+        "conversion_rate": conversion_rate,
         "counsellor_stats": counsellor_stats,
-        "unassigned_leads": unassigned,
+        "recent_leads": recent_leads,
         "total_counsellors": len(counsellors)
     }
 
