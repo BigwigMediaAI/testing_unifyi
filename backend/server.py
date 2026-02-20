@@ -2844,11 +2844,11 @@ async def counselling_manager_dashboard(
         "assigned_to": None
     })
 
-    # Converted leads (adjust status if needed)
+   # Converted leads (adjust status if needed)
     converted_leads = await db.leads.count_documents({
-    "university_id": university_id,
-    "assigned_to": {"$ne": None}
-})
+        "university_id": university_id,
+        "status": "converted"
+    })
 
 
     # Pending leads
