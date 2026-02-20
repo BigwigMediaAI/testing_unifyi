@@ -27,6 +27,7 @@ import {
   ChevronDown,
   Key,
   MessageCircle,
+  CalendarCheck,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -91,6 +92,7 @@ const counsellorMenu = [
     label: "Student Queries",
     path: "/counsellor/queries",
   },
+  { icon: CalendarCheck, label: "Walkins", path: "/counsellor/Walkins" },
 ];
 
 export function AdminLayout({ children }) {

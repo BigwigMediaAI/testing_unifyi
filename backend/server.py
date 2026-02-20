@@ -3468,7 +3468,21 @@ async def list_walkins_for_counsellor(
         {"_id": 0}
     ).sort("created_at", -1).to_list(200)
 
-    return {"data": walkins}
+    enriched_walkins = []
+
+    for w in walkins:
+        student = await db.users.find_one(
+            {"id": w["student_id"]},
+            {"_id": 0, "name": 1, "email": 1,"phone":1}
+        )
+
+        w["student_name"] = student["name"] if student else "Unknown"
+        w["student_email"] = student["email"] if student else None
+        w["student_phone"] = student["phone"] if student else None
+
+        enriched_walkins.append(w)
+
+    return {"data": enriched_walkins}
 
 
 @walkin_router.put("/{walkin_id}")

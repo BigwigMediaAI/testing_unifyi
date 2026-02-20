@@ -48,6 +48,8 @@ import InstitutionPage from "./pages/student/InstitutionPage";
 import StudentQueriesPage from "./pages/student/StudentQueriesPage";
 import StudentDocumentsPage from "./pages/student/StudentDocumentsPage";
 import StudentPaymentPage from "./pages/student/StudentPaymentPage";
+import Walkins from "./pages/student/StudentWalkins";
+import CounsellorWalkinsPage from "./pages/counselling/WalkinsPage";
 
 // Protected Route Component
 function ProtectedRoute({ children, allowedRoles }) {
@@ -68,15 +70,15 @@ function ProtectedRoute({ children, allowedRoles }) {
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
     // Redirect to appropriate dashboard based on role
     switch (user?.role) {
-      case 'super_admin':
+      case "super_admin":
         return <Navigate to="/admin" replace />;
-      case 'university_admin':
+      case "university_admin":
         return <Navigate to="/university" replace />;
-      case 'counselling_manager':
+      case "counselling_manager":
         return <Navigate to="/counselling" replace />;
-      case 'counsellor':
+      case "counsellor":
         return <Navigate to="/counsellor" replace />;
-      case 'student':
+      case "student":
         return <Navigate to="/student" replace />;
       default:
         return <Navigate to="/" replace />;
@@ -90,8 +92,12 @@ function ProtectedRoute({ children, allowedRoles }) {
 const PlaceholderPage = ({ title }) => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
     <div className="text-center">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{title}</h1>
-      <p className="text-slate-600 dark:text-slate-400">This page is under development</p>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+        {title}
+      </h1>
+      <p className="text-slate-600 dark:text-slate-400">
+        This page is under development
+      </p>
     </div>
   </div>
 );
@@ -104,18 +110,18 @@ function AppRoutes() {
       <Route path="/about" element={<AboutPage />} />
       <Route path="/features" element={<FeaturesPage />} />
       <Route path="/contact" element={<ContactPage />} />
-      
+
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/super-admin-login" element={<SuperAdminLoginPage />} />
       <Route path="/student/login" element={<StudentLoginPage />} />
       <Route path="/student/register" element={<StudentLoginPage />} />
-      
+
       {/* Super Admin Routes */}
       <Route
         path="/admin"
         element={
-          <ProtectedRoute allowedRoles={['super_admin']}>
+          <ProtectedRoute allowedRoles={["super_admin"]}>
             <SuperAdminDashboard />
           </ProtectedRoute>
         }
@@ -123,7 +129,7 @@ function AppRoutes() {
       <Route
         path="/admin/universities"
         element={
-          <ProtectedRoute allowedRoles={['super_admin']}>
+          <ProtectedRoute allowedRoles={["super_admin"]}>
             <UniversitiesPage />
           </ProtectedRoute>
         }
@@ -131,7 +137,7 @@ function AppRoutes() {
       <Route
         path="/admin/payments"
         element={
-          <ProtectedRoute allowedRoles={['super_admin']}>
+          <ProtectedRoute allowedRoles={["super_admin"]}>
             <PaymentsPage />
           </ProtectedRoute>
         }
@@ -139,7 +145,7 @@ function AppRoutes() {
       <Route
         path="/admin/analytics"
         element={
-          <ProtectedRoute allowedRoles={['super_admin']}>
+          <ProtectedRoute allowedRoles={["super_admin"]}>
             <AnalyticsPage />
           </ProtectedRoute>
         }
@@ -147,17 +153,17 @@ function AppRoutes() {
       <Route
         path="/admin/system"
         element={
-          <ProtectedRoute allowedRoles={['super_admin']}>
+          <ProtectedRoute allowedRoles={["super_admin"]}>
             <SystemPage />
           </ProtectedRoute>
         }
       />
-      
+
       {/* University Admin Routes */}
       <Route
         path="/university"
         element={
-          <ProtectedRoute allowedRoles={['university_admin']}>
+          <ProtectedRoute allowedRoles={["university_admin"]}>
             <UniversityDashboard />
           </ProtectedRoute>
         }
@@ -165,7 +171,7 @@ function AppRoutes() {
       <Route
         path="/university/departments"
         element={
-          <ProtectedRoute allowedRoles={['university_admin']}>
+          <ProtectedRoute allowedRoles={["university_admin"]}>
             <DepartmentsPage />
           </ProtectedRoute>
         }
@@ -173,7 +179,7 @@ function AppRoutes() {
       <Route
         path="/university/courses"
         element={
-          <ProtectedRoute allowedRoles={['university_admin']}>
+          <ProtectedRoute allowedRoles={["university_admin"]}>
             <CoursesPage />
           </ProtectedRoute>
         }
@@ -181,7 +187,7 @@ function AppRoutes() {
       <Route
         path="/university/sessions"
         element={
-          <ProtectedRoute allowedRoles={['university_admin']}>
+          <ProtectedRoute allowedRoles={["university_admin"]}>
             <SessionsPage />
           </ProtectedRoute>
         }
@@ -189,7 +195,7 @@ function AppRoutes() {
       <Route
         path="/university/staff"
         element={
-          <ProtectedRoute allowedRoles={['university_admin']}>
+          <ProtectedRoute allowedRoles={["university_admin"]}>
             <StaffManagementPage />
           </ProtectedRoute>
         }
@@ -197,7 +203,7 @@ function AppRoutes() {
       <Route
         path="/university/registration-config"
         element={
-          <ProtectedRoute allowedRoles={['university_admin']}>
+          <ProtectedRoute allowedRoles={["university_admin"]}>
             <RegistrationConfigPage />
           </ProtectedRoute>
         }
@@ -205,7 +211,7 @@ function AppRoutes() {
       <Route
         path="/university/questions"
         element={
-          <ProtectedRoute allowedRoles={['university_admin']}>
+          <ProtectedRoute allowedRoles={["university_admin"]}>
             <QuestionBankPage />
           </ProtectedRoute>
         }
@@ -213,7 +219,7 @@ function AppRoutes() {
       <Route
         path="/university/payments"
         element={
-          <ProtectedRoute allowedRoles={['university_admin']}>
+          <ProtectedRoute allowedRoles={["university_admin"]}>
             <UniversityPaymentsPage />
           </ProtectedRoute>
         }
@@ -221,17 +227,17 @@ function AppRoutes() {
       <Route
         path="/university/settings"
         element={
-          <ProtectedRoute allowedRoles={['university_admin']}>
+          <ProtectedRoute allowedRoles={["university_admin"]}>
             <UniversitySettingsPage />
           </ProtectedRoute>
         }
       />
-      
+
       {/* Counselling Manager Routes */}
       <Route
         path="/counselling"
         element={
-          <ProtectedRoute allowedRoles={['counselling_manager']}>
+          <ProtectedRoute allowedRoles={["counselling_manager"]}>
             <CounsellingManagerDashboard />
           </ProtectedRoute>
         }
@@ -239,7 +245,9 @@ function AppRoutes() {
       <Route
         path="/counselling/leads"
         element={
-          <ProtectedRoute allowedRoles={['counselling_manager', 'university_admin']}>
+          <ProtectedRoute
+            allowedRoles={["counselling_manager", "university_admin"]}
+          >
             <LeadsPage />
           </ProtectedRoute>
         }
@@ -247,7 +255,13 @@ function AppRoutes() {
       <Route
         path="/counselling/leads/:leadId"
         element={
-          <ProtectedRoute allowedRoles={['counselling_manager', 'university_admin', 'counsellor']}>
+          <ProtectedRoute
+            allowedRoles={[
+              "counselling_manager",
+              "university_admin",
+              "counsellor",
+            ]}
+          >
             <LeadDetailsPage />
           </ProtectedRoute>
         }
@@ -255,7 +269,7 @@ function AppRoutes() {
       <Route
         path="/counselling/team"
         element={
-          <ProtectedRoute allowedRoles={['counselling_manager']}>
+          <ProtectedRoute allowedRoles={["counselling_manager"]}>
             <TeamManagementPage />
           </ProtectedRoute>
         }
@@ -263,7 +277,7 @@ function AppRoutes() {
       <Route
         path="/counselling/queries"
         element={
-          <ProtectedRoute allowedRoles={['counselling_manager', 'counsellor']}>
+          <ProtectedRoute allowedRoles={["counselling_manager", "counsellor"]}>
             <CounsellorQueriesPage />
           </ProtectedRoute>
         }
@@ -271,17 +285,19 @@ function AppRoutes() {
       <Route
         path="/counselling/analytics"
         element={
-          <ProtectedRoute allowedRoles={['counselling_manager', 'university_admin']}>
+          <ProtectedRoute
+            allowedRoles={["counselling_manager", "university_admin"]}
+          >
             <LeadAnalyticsPage />
           </ProtectedRoute>
         }
       />
-      
+
       {/* Counsellor Routes */}
       <Route
         path="/counsellor"
         element={
-          <ProtectedRoute allowedRoles={['counsellor']}>
+          <ProtectedRoute allowedRoles={["counsellor"]}>
             <CounsellorDashboard />
           </ProtectedRoute>
         }
@@ -289,7 +305,7 @@ function AppRoutes() {
       <Route
         path="/counsellor/leads"
         element={
-          <ProtectedRoute allowedRoles={['counsellor']}>
+          <ProtectedRoute allowedRoles={["counsellor"]}>
             <LeadsPage />
           </ProtectedRoute>
         }
@@ -297,7 +313,7 @@ function AppRoutes() {
       <Route
         path="/counsellor/follow-ups"
         element={
-          <ProtectedRoute allowedRoles={['counsellor']}>
+          <ProtectedRoute allowedRoles={["counsellor"]}>
             <LeadsPage filterFollowUps={true} />
           </ProtectedRoute>
         }
@@ -305,17 +321,25 @@ function AppRoutes() {
       <Route
         path="/counsellor/queries"
         element={
-          <ProtectedRoute allowedRoles={['counsellor']}>
+          <ProtectedRoute allowedRoles={["counsellor"]}>
             <CounsellorQueriesPage />
           </ProtectedRoute>
         }
       />
-      
+      <Route
+        path="/counsellor/Walkins"
+        element={
+          <ProtectedRoute allowedRoles={["counsellor"]}>
+            <CounsellorWalkinsPage />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Student Routes */}
       <Route
         path="/student"
         element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={["student"]}>
             <StudentDashboard />
           </ProtectedRoute>
         }
@@ -323,7 +347,7 @@ function AppRoutes() {
       <Route
         path="/student/application"
         element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={["student"]}>
             <StudentApplicationPage />
           </ProtectedRoute>
         }
@@ -331,7 +355,7 @@ function AppRoutes() {
       <Route
         path="/student/documents"
         element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={["student"]}>
             <StudentDocumentsPage />
           </ProtectedRoute>
         }
@@ -339,7 +363,7 @@ function AppRoutes() {
       <Route
         path="/student/test"
         element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={["student"]}>
             <StudentTestPage />
           </ProtectedRoute>
         }
@@ -347,7 +371,7 @@ function AppRoutes() {
       <Route
         path="/student/payment"
         element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={["student"]}>
             <StudentPaymentPage />
           </ProtectedRoute>
         }
@@ -355,20 +379,28 @@ function AppRoutes() {
       <Route
         path="/student/institution"
         element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={["student"]}>
             <InstitutionPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/walkins"
+        element={
+          <ProtectedRoute allowedRoles={["student"]}>
+            <Walkins />
           </ProtectedRoute>
         }
       />
       <Route
         path="/student/queries"
         element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={["student"]}>
             <StudentQueriesPage />
           </ProtectedRoute>
         }
       />
-      
+
       {/* Catch all - redirect to home */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

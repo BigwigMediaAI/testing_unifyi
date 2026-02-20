@@ -93,6 +93,7 @@ export default function LeadsPage() {
         }),
         universityAPI.listStaff("counsellor"),
       ]);
+      console.log(leadsRes);
       setLeads(leadsRes.data.data || []);
       setTotalPages(leadsRes.data.pages || 1);
       setCounsellors(staffRes.data.data || []);
