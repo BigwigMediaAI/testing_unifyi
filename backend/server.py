@@ -3008,82 +3008,133 @@ async def counsellor_dashboard(
     current_user: dict = Depends(require_roles(UserRole.COUNSELLOR))
 ):
     """Get counsellor's personal dashboard"""
+
     user_id = current_user["id"]
     university_id = current_user["university_id"]
-    
-    # Total leads assigned to this counsellor
+
+    # ----------------------------
+    # BASIC COUNTS
+    # ----------------------------
+
     total_leads = await db.leads.count_documents({
         "university_id": university_id,
         "assigned_to": user_id
     })
-    
-    # New leads (stage = new_lead)
+
     new_leads = await db.leads.count_documents({
         "university_id": university_id,
         "assigned_to": user_id,
-        "stage": "new_lead"
+        "stage": {"$in": ["new_lead", "application_started"]}
     })
-    
-    # Converted leads
+
     converted_leads = await db.leads.count_documents({
         "university_id": university_id,
         "assigned_to": user_id,
         "stage": {"$in": ["converted", "admission_confirmed"]}
     })
-    
-    # Overdue follow-ups
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    pipeline = [
-        {"$match": {"university_id": university_id, "assigned_to": user_id}},
+
+    # ----------------------------
+    # DATE STRING (SAFE METHOD)
+    # ----------------------------
+
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+
+    # ----------------------------
+    # OVERDUE FOLLOWUPS
+    # ----------------------------
+
+    overdue_pipeline = [
+        {
+            "$match": {
+                "university_id": university_id,
+                "assigned_to": user_id
+            }
+        },
         {"$unwind": "$follow_ups"},
-        {"$match": {
-            "follow_ups.is_completed": False,
-            "follow_ups.scheduled_at": {"$lt": today.isoformat()}
-        }},
+        {
+            "$addFields": {
+                "followup_date": {
+                    "$substr": ["$follow_ups.scheduled_at", 0, 10]
+                }
+            }
+        },
+        {
+            "$match": {
+                "follow_ups.is_completed": False,
+                "followup_date": {"$lt": today_str}
+            }
+        },
         {"$count": "overdue"}
     ]
-    overdue_result = await db.leads.aggregate(pipeline).to_list(1)
+
+    overdue_result = await db.leads.aggregate(overdue_pipeline).to_list(1)
     overdue_follow_ups = overdue_result[0]["overdue"] if overdue_result else 0
-    
-    # Recent leads
-    recent_leads = await db.leads.find(
-        {"university_id": university_id, "assigned_to": user_id},
-        {"_id": 0}
-    ).sort("created_at", -1).limit(10).to_list(10)
-    
-    # Today's follow-ups
-    tomorrow = today + timedelta(days=1)
-    pipeline = [
-        {"$match": {"university_id": university_id, "assigned_to": user_id}},
-        {"$unwind": "$follow_ups"},
-        {"$match": {
-            "follow_ups.is_completed": False,
-            "follow_ups.scheduled_at": {
-                "$gte": today.isoformat(),
-                "$lt": tomorrow.isoformat()
+
+    # ----------------------------
+    # TODAY FOLLOWUPS
+    # ----------------------------
+
+    today_pipeline = [
+        {
+            "$match": {
+                "university_id": university_id,
+                "assigned_to": user_id
             }
-        }},
-        {"$project": {
-            "lead_id": "$id",
-            "lead_name": "$name",
-            "type": "$follow_ups.follow_up_type",
-            "notes": "$follow_ups.notes",
-            "scheduled_at": "$follow_ups.scheduled_at"
-        }},
+        },
+        {"$unwind": "$follow_ups"},
+        {
+            "$addFields": {
+                "followup_date": {
+                    "$substr": ["$follow_ups.scheduled_at", 0, 10]
+                }
+            }
+        },
+        {
+            "$match": {
+                "follow_ups.is_completed": False,
+                "followup_date": today_str
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "lead_id": "$id",
+                "lead_name": "$name",
+                "notes": "$follow_ups.notes",
+                "scheduled_at": "$follow_ups.scheduled_at"
+            }
+        },
         {"$limit": 10}
     ]
-    today_follow_ups = await db.leads.aggregate(pipeline).to_list(10)
-    
+
+    today_follow_ups = await db.leads.aggregate(today_pipeline).to_list(10)
+
+    # ----------------------------
+    # RECENT LEADS
+    # ----------------------------
+
+    recent_leads_raw = await db.leads.find(
+        {
+            "university_id": university_id,
+            "assigned_to": user_id
+        },
+        {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+
+    recent_leads = [serialize_doc(l) for l in recent_leads_raw]
+
+    # ----------------------------
+    # FINAL RESPONSE
+    # ----------------------------
+
     return {
         "total_leads": total_leads,
         "new_leads": new_leads,
         "converted_leads": converted_leads,
         "overdue_follow_ups": overdue_follow_ups,
-        "recent_leads": [serialize_doc(l) for l in recent_leads],
+        "recent_leads": recent_leads,
         "today_follow_ups": today_follow_ups
     }
-
-
 # ============== WEBHOOK ROUTES ==============
 
 @api_router.post("/webhooks/razorpay")
