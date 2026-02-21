@@ -26,6 +26,7 @@ class LeadSource(str, Enum):
     SHIKSHA = "shiksha"
     COLLEGEDUNIA = "collegedunia"
     OTHER_API = "other_api"
+    REFERRAL="refer by student"
 
 
 class TimelineEventType(str, Enum):

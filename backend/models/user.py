@@ -23,6 +23,8 @@ class User(BaseModel):
     university_id: Optional[str] = None  # None for super_admin
     person_id: Optional[str] = None  # Unique within university for staff
     phone: Optional[str] = None
+    referred_by: Optional[str] = None   # Application ID ya person_id of referrer
+    referrals: List[str] = []           # List of student IDs referred
     is_active: bool = True
     password_hash: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

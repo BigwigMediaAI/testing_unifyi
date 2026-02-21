@@ -2423,12 +2423,13 @@ async def student_register(
     university_code: str = Body(...)
 ):
     """Student self-registration"""
+
     # Find university
     university = await db.universities.find_one({"code": university_code, "is_active": True})
     if not university:
         raise HTTPException(status_code=404, detail="University not found")
-    
-    # Check for existing student
+
+    # Check existing student
     existing = await db.users.find_one({
         "email": registration_data["email"],
         "university_id": university["id"],
@@ -2436,50 +2437,78 @@ async def student_register(
     })
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
+    # 🔥 CHECK REFERRAL (person_id based)
+    source_code = registration_data.get("source")
+    referrer = None
+
+    if source_code:
+        referrer = await db.users.find_one({
+            "person_id": source_code,
+            "role": "student",
+            "university_id": university["id"]
+        })
+
     # Create student user
     password = registration_data.get("password", str(uuid.uuid4())[:8])
-    student = User(
-    email=registration_data["email"],
-    name=registration_data["name"],
-    phone=registration_data.get("phone"),
-    role=UserRole.STUDENT,
-    university_id=university["id"],
-    person_id=f"STU-{uuid.uuid4().hex[:6].upper()}",  #auto create person_id
-    password_hash=hash_password(password)
-)
 
-    
+    new_person_id = f"STU-{uuid.uuid4().hex[:6].upper()}"
+
+    student = User(
+        email=registration_data["email"],
+        name=registration_data["name"],
+        phone=registration_data.get("phone"),
+        role=UserRole.STUDENT,
+        university_id=university["id"],
+        person_id=new_person_id,
+        password_hash=hash_password(password),
+        referred_by=referrer["person_id"] if referrer else None  # ✅ save referral
+    )
+
     await db.users.insert_one(student.model_dump())
-    
-    # Create lead
+
+    # 🔥 Update Referrer referrals list
+    if referrer:
+        await db.users.update_one(
+            {"id": referrer["id"]},
+            {"$addToSet": {"referrals": student.id}}  # prevents duplicate
+        )
+
+    # Create lead (change source if referral)
+    lead_source = LeadSource.WEBSITE
+    if referrer:
+        lead_source = LeadSource.REFERRAL
+
     lead = Lead(
         university_id=university["id"],
         name=registration_data["name"],
         email=registration_data["email"],
         phone=registration_data.get("phone", ""),
-        source=LeadSource.WEBSITE
+        source=lead_source
     )
+
     lead.timeline.append(TimelineEntry(
         event_type=TimelineEventType.CREATED,
         description="Lead created via student registration"
     ))
+
     await db.leads.insert_one(lead.model_dump())
-    
+
     # Create application
     application = Application(
         university_id=university["id"],
         student_id=student.id,
         lead_id=lead.id
     )
+
     await db.applications.insert_one(application.model_dump())
-    
+
     # Update lead with application
     await db.leads.update_one(
         {"id": lead.id},
         {"$set": {"application_id": application.id, "stage": "application_started"}}
     )
-    
+
     # Generate token
     token_data = {
         "id": student.id,
@@ -2488,28 +2517,7 @@ async def student_register(
         "role": "student",
         "university_id": university["id"]
     }
-    
-    # Send welcome email (non-blocking)
-    try:
-        await email_service.send_welcome_email(
-            to_email=student.email,
-            to_name=student.name,
-            university_name=university.get("name", "UNIFY")
-        )
-        # Log the email
-        email_log = EmailLog(
-            to_email=student.email,
-            to_name=student.name,
-            subject=f"Welcome to {university.get('name', 'UNIFY')}",
-            email_type=EmailType.STUDENT_REGISTRATION,
-            status=EmailStatus.SENT,
-            university_id=university["id"],
-            user_id=student.id
-        )
-        await db.email_logs.insert_one(email_log.model_dump())
-    except Exception as e:
-        logger.error(f"Failed to send welcome email: {str(e)}")
-    
+
     return {
         "message": "Registration successful",
         "access_token": create_token(token_data),
@@ -2517,6 +2525,30 @@ async def student_register(
         "application_id": application.id
     }
 
+
+@student_router.get("/my-referrals")
+async def get_my_referrals(current_user=Depends(get_current_user)):
+
+    student = await db.users.find_one({"id": current_user["id"]})
+
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    referral_ids = student.get("referrals", [])
+
+    referred_students = await db.users.find(
+        {"id": {"$in": referral_ids}},
+        {
+            "_id": 0,  # hide mongodb id
+            "id": 1,
+            "name": 1,
+            "email": 1,
+            "person_id": 1,
+            "created_at": 1
+        }
+    ).to_list(None)
+
+    return referred_students
 
 @student_router.get("/registration-config")
 async def get_registration_config(
