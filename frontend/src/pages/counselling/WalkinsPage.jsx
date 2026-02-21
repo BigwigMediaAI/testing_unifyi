@@ -25,6 +25,7 @@ import {
   DialogFooter,
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
+import { Input } from "../../components/ui/input";
 import { toast } from "sonner";
 
 export default function CounsellorWalkinsPage() {
@@ -70,8 +71,8 @@ export default function CounsellorWalkinsPage() {
       await walkinsAPI.updateStatus(selectedWalkin.id, {
         status: actionType,
         counsellor_note: note || null,
-        visit_date: newDate || null,
-        visit_time: newTime || null,
+        visit_date: actionType === "modified" ? newDate : null,
+        visit_time: actionType === "modified" ? newTime : null,
       });
 
       toast.success("Walk-in updated successfully");
@@ -95,6 +96,8 @@ export default function CounsellorWalkinsPage() {
     }
   };
 
+  const todayStr = new Date().toISOString().split("T")[0];
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -114,9 +117,11 @@ export default function CounsellorWalkinsPage() {
 
           <CardContent>
             {loading ? (
-              <p>Loading...</p>
+              <div className="py-8 text-center text-slate-500">Loading...</div>
             ) : walkins.length === 0 ? (
-              <p className="text-slate-500">No walk-in requests found.</p>
+              <div className="py-8 text-center text-slate-500">
+                No walk-in requests found.
+              </div>
             ) : (
               <Table>
                 <TableHeader>
@@ -138,7 +143,7 @@ export default function CounsellorWalkinsPage() {
                       <TableCell>{w.student_name}</TableCell>
                       <TableCell>
                         {new Date(w.visit_date).toLocaleDateString()}
-                      </TableCell>{" "}
+                      </TableCell>
                       <TableCell>{w.student_phone}</TableCell>
                       <TableCell>{w.reason}</TableCell>
                       <TableCell>{w.visit_time}</TableCell>
@@ -190,9 +195,9 @@ export default function CounsellorWalkinsPage() {
           </CardContent>
         </Card>
 
-        {/* Action Modal */}
+        {/* ✅ Action Modal */}
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
                 {actionType === "approved"
@@ -203,35 +208,41 @@ export default function CounsellorWalkinsPage() {
               </DialogTitle>
             </DialogHeader>
 
-            {/* Date */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Visit Date</label>
-              <input
-                type="date"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-                className="w-full border rounded-lg p-2"
-              />
-            </div>
+            <div className="space-y-4 py-2">
+              {/* 🔥 Show only for MODIFY */}
+              {actionType === "modified" && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Visit Date</label>
+                    <Input
+                      type="date"
+                      value={newDate}
+                      min={todayStr}
+                      onChange={(e) => setNewDate(e.target.value)}
+                    />
+                  </div>
 
-            {/* Time */}
-            <div className="space-y-2 mt-3">
-              <label className="text-sm font-medium">Visit Time</label>
-              <input
-                type="time"
-                value={newTime}
-                onChange={(e) => setNewTime(e.target.value)}
-                className="w-full border rounded-lg p-2"
-              />
-            </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Visit Time</label>
+                    <Input
+                      type="time"
+                      value={newTime}
+                      onChange={(e) => setNewTime(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
 
-            {/* Note */}
-            <div className="mt-3">
-              <Textarea
-                placeholder="Add a note..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
+              {/* ✅ Always visible */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Counsellor Note</label>
+                <Textarea
+                  placeholder="Add a note for the student..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={4}
+                />
+              </div>
             </div>
 
             <DialogFooter>
