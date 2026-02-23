@@ -39,6 +39,7 @@ export const authAPI = {
   login: (data) => api.post("/auth/login", data),
   studentLogin: (data) => api.post("/auth/student/login", data),
   me: () => api.get("/auth/me"),
+  getMyLead: () => api.get("/student/my-lead"),
 };
 
 // Super Admin APIs

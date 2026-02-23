@@ -309,6 +309,28 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     return serialize_doc(user)
 
 
+@student_router.get("/my-lead")
+async def get_my_lead(
+    current_user: dict = Depends(require_roles(UserRole.STUDENT))
+):
+    """Get lead details for logged-in student"""
+
+    lead = await db.leads.find_one(
+        {
+            "email": current_user["email"],
+            "university_id": current_user["university_id"]
+        },
+        {"_id": 0}
+    )
+
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    return serialize_doc(lead)
+
+
+
+
 @auth_router.put("/change-password")
 async def change_password(
     current_password: str = Body(...),
