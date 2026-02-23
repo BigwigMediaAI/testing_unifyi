@@ -49,6 +49,7 @@ export default function StudentLoginPage() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPhone, setRegisterPhone] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
 
   useEffect(() => {
     if (isAuthenticated && user?.role === "student") {
@@ -113,6 +114,7 @@ export default function StudentLoginPage() {
           email: registerEmail,
           phone: registerPhone,
           password: registerPassword,
+          source: referralCode || undefined, // optional
         },
       },
       selectedUni?.code,
@@ -295,6 +297,16 @@ export default function StudentLoginPage() {
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     required
                     data-testid="register-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="referralCode">Referral Code (Optional)</Label>
+                  <Input
+                    id="referralCode"
+                    placeholder="Enter referral code if any"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value)}
+                    data-testid="register-referral-code"
                   />
                 </div>
 

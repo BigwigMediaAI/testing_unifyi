@@ -50,6 +50,7 @@ import StudentDocumentsPage from "./pages/student/StudentDocumentsPage";
 import StudentPaymentPage from "./pages/student/StudentPaymentPage";
 import Walkins from "./pages/student/StudentWalkins";
 import CounsellorWalkinsPage from "./pages/counselling/WalkinsPage";
+import ReferAFriend from "./pages/student/ReferAFriend";
 
 // Protected Route Component
 function ProtectedRoute({ children, allowedRoles }) {
@@ -397,6 +398,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["student"]}>
             <StudentQueriesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/refer"
+        element={
+          <ProtectedRoute allowedRoles={["student"]}>
+            <ReferAFriend />
           </ProtectedRoute>
         }
       />

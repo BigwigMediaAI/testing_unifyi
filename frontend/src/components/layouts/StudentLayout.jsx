@@ -36,6 +36,7 @@ const studentMenu = [
   { icon: CreditCard, label: "Fee Payment", path: "/student/payment" },
   { icon: MessageCircle, label: "My Queries", path: "/student/queries" },
   { icon: CalendarCheck, label: "Walkins", path: "/student/walkins" },
+  { icon: CalendarCheck, label: "Refer", path: "/student/refer" },
   { icon: Building2, label: "Institution", path: "/student/institution" },
 ];
 

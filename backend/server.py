@@ -292,6 +292,7 @@ async def student_login(login_data: StudentLogin):
         "email": user["email"],
         "name": user["name"],
         "role": user["role"],
+        "person_id": user["person_id"],
         "university_id": user.get("university_id")
     }
     
@@ -2446,7 +2447,7 @@ async def student_register(
         referrer = await db.users.find_one({
             "person_id": source_code,
             "role": "student",
-            "university_id": university["id"]
+            # "university_id": university["id"]
         })
 
     # Create student user
@@ -2515,7 +2516,8 @@ async def student_register(
         "email": student.email,
         "name": student.name,
         "role": "student",
-        "university_id": university["id"]
+        "university_id": university["id"],
+        "person_id": student.person_id
     }
 
     return {

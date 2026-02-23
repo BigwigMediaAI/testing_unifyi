@@ -241,4 +241,17 @@ export const walkinsAPI = {
   },
 };
 
+// referralsAP
+export const referralsAPI = {
+  // Fetch student's own referrals
+  getMy: () => {
+    const token = localStorage.getItem("unify-token");
+
+    return api.get("/student/my-referrals", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+};
 export default api;
