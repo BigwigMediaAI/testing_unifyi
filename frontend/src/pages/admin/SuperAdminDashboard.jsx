@@ -1,12 +1,43 @@
-import { useState, useEffect } from 'react';
-import { AdminLayout } from '../../components/layouts/AdminLayout';
-import { superAdminAPI } from '../../lib/api';
-import { formatCurrency } from '../../lib/utils';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
-import { Building2, Users, FileText, CreditCard, TrendingUp, Activity } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useState, useEffect } from "react";
+import { AdminLayout } from "../../components/layouts/AdminLayout";
+import { superAdminAPI } from "../../lib/api";
+import { formatCurrency } from "../../lib/utils";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "../../components/ui/card";
+import {
+  Building2,
+  Users,
+  FileText,
+  CreditCard,
+  TrendingUp,
+  Activity,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
-const COLORS = ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+const COLORS = [
+  "#2563EB",
+  "#10B981",
+  "#F59E0B",
+  "#EF4444",
+  "#8B5CF6",
+  "#EC4899",
+];
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -21,12 +52,12 @@ export default function SuperAdminDashboard() {
     try {
       const [dashboardRes, analyticsRes] = await Promise.all([
         superAdminAPI.dashboard(),
-        superAdminAPI.analytics()
+        superAdminAPI.analytics(),
       ]);
       setStats(dashboardRes.data);
       setAnalytics(analyticsRes.data);
     } catch (err) {
-      console.error('Failed to load dashboard:', err);
+      console.error("Failed to load dashboard:", err);
     } finally {
       setLoading(false);
     }
@@ -42,12 +73,18 @@ export default function SuperAdminDashboard() {
     );
   }
 
-  const leadStageData = analytics?.leads_by_stage 
-    ? Object.entries(analytics.leads_by_stage).map(([name, value]) => ({ name: name.replace(/_/g, ' '), value }))
+  const leadStageData = analytics?.leads_by_stage
+    ? Object.entries(analytics.leads_by_stage).map(([name, value]) => ({
+        name: name.replace(/_/g, " "),
+        value,
+      }))
     : [];
 
   const applicationStatusData = analytics?.applications_by_status
-    ? Object.entries(analytics.applications_by_status).map(([name, value]) => ({ name: name.replace(/_/g, ' '), value }))
+    ? Object.entries(analytics.applications_by_status).map(([name, value]) => ({
+        name: name.replace(/_/g, " "),
+        value,
+      }))
     : [];
 
   return (
@@ -55,8 +92,12 @@ export default function SuperAdminDashboard() {
       <div className="space-y-6">
         {/* Page Header */}
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">Platform overview and analytics</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            Dashboard
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
+            Platform overview and analytics
+          </p>
         </div>
 
         {/* Stats Cards */}
@@ -65,7 +106,9 @@ export default function SuperAdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Universities</p>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    Total Universities
+                  </p>
                   <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
                     {stats?.universities?.total || 0}
                   </p>
@@ -84,7 +127,9 @@ export default function SuperAdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Students</p>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    Total Students
+                  </p>
                   <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
                     {stats?.students || 0}
                   </p>
@@ -100,7 +145,9 @@ export default function SuperAdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Leads</p>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    Total Leads
+                  </p>
                   <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
                     {stats?.leads || 0}
                   </p>
@@ -116,7 +163,9 @@ export default function SuperAdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Applications</p>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    Total Applications
+                  </p>
                   <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
                     {stats?.applications || 0}
                   </p>
@@ -141,32 +190,48 @@ export default function SuperAdminDashboard() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Successful</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Successful
+                </p>
                 <p className="text-2xl font-bold text-green-600">
                   {formatCurrency(stats?.payments?.success?.total || 0)}
                 </p>
-                <p className="text-sm text-slate-500">{stats?.payments?.success?.count || 0} payments</p>
+                <p className="text-sm text-slate-500">
+                  {stats?.payments?.success?.count || 0} payments
+                </p>
               </div>
               <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Failed</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Failed
+                </p>
                 <p className="text-2xl font-bold text-red-600">
                   {formatCurrency(stats?.payments?.failed?.total || 0)}
                 </p>
-                <p className="text-sm text-slate-500">{stats?.payments?.failed?.count || 0} payments</p>
+                <p className="text-sm text-slate-500">
+                  {stats?.payments?.failed?.count || 0} payments
+                </p>
               </div>
               <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Refunded</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Refunded
+                </p>
                 <p className="text-2xl font-bold text-amber-600">
                   {formatCurrency(stats?.payments?.refunded?.total || 0)}
                 </p>
-                <p className="text-sm text-slate-500">{stats?.payments?.refunded?.count || 0} refunds</p>
+                <p className="text-sm text-slate-500">
+                  {stats?.payments?.refunded?.count || 0} refunds
+                </p>
               </div>
               <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Pending</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Pending
+                </p>
                 <p className="text-2xl font-bold text-slate-600">
                   {formatCurrency(stats?.payments?.initiated?.total || 0)}
                 </p>
-                <p className="text-sm text-slate-500">{stats?.payments?.initiated?.count || 0} pending</p>
+                <p className="text-sm text-slate-500">
+                  {stats?.payments?.initiated?.count || 0} pending
+                </p>
               </div>
             </div>
           </CardContent>
@@ -177,7 +242,9 @@ export default function SuperAdminDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Lead Stages Distribution</CardTitle>
-              <CardDescription>Current distribution of leads across stages</CardDescription>
+              <CardDescription>
+                Current distribution of leads across stages
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-80">
@@ -185,7 +252,12 @@ export default function SuperAdminDashboard() {
                   <BarChart data={leadStageData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 12 }} />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      width={120}
+                      tick={{ fontSize: 12 }}
+                    />
                     <Tooltip />
                     <Bar dataKey="value" fill="#2563EB" radius={[0, 4, 4, 0]} />
                   </BarChart>
@@ -211,10 +283,15 @@ export default function SuperAdminDashboard() {
                       outerRadius={100}
                       paddingAngle={2}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      label={({ name, percent }) =>
+                        `${name} (${(percent * 100).toFixed(0)}%)`
+                      }
                     >
                       {applicationStatusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
                       ))}
                     </Pie>
                     <Tooltip />

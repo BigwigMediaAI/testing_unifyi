@@ -51,6 +51,7 @@ import StudentPaymentPage from "./pages/student/StudentPaymentPage";
 import Walkins from "./pages/student/StudentWalkins";
 import CounsellorWalkinsPage from "./pages/counselling/WalkinsPage";
 import ReferAFriend from "./pages/student/ReferAFriend";
+import Communications from "./pages/admin/Communications";
 
 // Protected Route Component
 function ProtectedRoute({ children, allowedRoles }) {
@@ -148,6 +149,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["super_admin"]}>
             <AnalyticsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/Communication"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <Communications />
           </ProtectedRoute>
         }
       />

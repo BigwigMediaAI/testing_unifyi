@@ -28,6 +28,7 @@ import {
   Key,
   MessageCircle,
   CalendarCheck,
+  MailIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -52,6 +53,7 @@ const superAdminMenu = [
   { icon: Building2, label: "Universities", path: "/admin/universities" },
   { icon: CreditCard, label: "Payments", path: "/admin/payments" },
   { icon: BarChart3, label: "Analytics", path: "/admin/analytics" },
+  { icon: MailIcon, label: "Communication", path: "/admin/Communication" },
   { icon: Settings, label: "System", path: "/admin/system" },
 ];
 

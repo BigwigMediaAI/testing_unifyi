@@ -255,4 +255,32 @@ export const referralsAPI = {
     });
   },
 };
+
+export const superAdminCommunicationsAPI = {
+  // ===============================
+  // SUPER ADMIN - EMAIL COMMUNICATION
+  // ===============================
+
+  // Send email to universities
+  sendEmail: (data) => {
+    const token = localStorage.getItem("unify-token");
+
+    return api.post("/superadmin/communications/email", data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Get communication history
+  getHistory: (limit = 20) => {
+    const token = localStorage.getItem("unify-token");
+
+    return api.get(`/superadmin/communications?limit=${limit}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+};
 export default api;
