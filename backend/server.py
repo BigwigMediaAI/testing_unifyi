@@ -46,7 +46,11 @@ from models.email_log import EmailLog, EmailType, EmailStatus
 from models.query import StudentQuery, QueryCreate, QueryReply, QueryUpdate, QueryStatus, QueryMessage
 from services.email_service import email_service
 from models.walkin import WalkIn, WalkInCreate, WalkInStatus, WalkInUpdate
-
+from models.admin_communication import (
+    AdminCommunication,
+    AdminCommunicationCreate,
+    CommunicationStatus,
+)
 
 
 ROOT_DIR = Path(__file__).parent
@@ -627,6 +631,97 @@ async def platform_analytics(
         "leads_by_stage": {item["_id"]: item["count"] for item in leads_by_stage if item["_id"]}
     }
 
+@superadmin_router.post(
+    "/communications/email",
+    response_model=AdminCommunication,
+)
+async def send_communication_email(
+    payload: AdminCommunicationCreate,
+    current_user: dict = Depends(require_roles(UserRole.SUPER_ADMIN))
+):
+    """
+    Super Admin → Send email to selected or all universities
+    """
+
+    # 1️⃣ Fetch universities
+    if payload.send_to_all:
+        universities = await db.universities.find({}, {"_id": 0}).to_list(length=None)
+    else:
+        if not payload.university_ids:
+            raise HTTPException(status_code=400, detail="No universities selected")
+
+        universities = await db.universities.find(
+            {"id": {"$in": payload.university_ids}},
+            {"_id": 0}
+        ).to_list(length=None)
+
+    if not universities:
+        raise HTTPException(status_code=404, detail="No universities found")
+
+    # 2️⃣ Send Emails
+    success_count = 0
+    fail_count = 0
+
+    for uni in universities:
+        result = await email_service.send_email(
+            to_email=uni.get("email"),
+            to_name=uni.get("name"),
+            subject=payload.subject,
+            html_content=payload.message
+        )
+
+        if result.get("success"):
+            success_count += 1
+        else:
+            fail_count += 1
+
+    total = len(universities)
+
+    # 3️⃣ Determine Status
+    if success_count == total:
+        status = CommunicationStatus.SENT
+    elif success_count == 0:
+        status = CommunicationStatus.FAILED
+    else:
+        status = CommunicationStatus.PARTIAL
+
+    # 4️⃣ Create Communication Record
+    communication = AdminCommunication(
+        subject=payload.subject,
+        message=payload.message,
+        sent_by=current_user["id"],
+        recipient_university_ids=[u["id"] for u in universities],
+        send_to_all=payload.send_to_all,
+        total_recipients=total,
+        successful=success_count,
+        failed=fail_count,
+        status=status,
+    )
+
+    # 5️⃣ Save in DB
+    await db.admin_communications.insert_one(communication.model_dump())
+
+    return communication
+
+
+@superadmin_router.get(
+    "/communications",
+    response_model=List[AdminCommunication]
+)
+async def get_communication_history(
+    limit: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(require_roles(UserRole.SUPER_ADMIN))
+):
+    """
+    Super Admin → View communication history
+    """
+
+    communications = await db.admin_communications.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(length=None)
+
+    return communications
 
 # ============== UNIVERSITY ADMIN ROUTES ==============
 
@@ -3714,6 +3809,7 @@ api_router.include_router(document_router)
 api_router.include_router(email_router)
 api_router.include_router(query_router)
 api_router.include_router(walkin_router)
+api_router.include_router(superadmin_router)
 
 
 app.include_router(api_router)
