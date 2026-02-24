@@ -49,6 +49,7 @@ from models.walkin import WalkIn, WalkInCreate, WalkInStatus, WalkInUpdate
 from models.admin_communication import (
     AdminCommunication,
     AdminCommunicationCreate,
+    AdminCommunicationHistoryResponse,
     CommunicationStatus,
 )
 
@@ -706,20 +707,59 @@ async def send_communication_email(
 
 @superadmin_router.get(
     "/communications",
-    response_model=List[AdminCommunication]
+    response_model=List[AdminCommunicationHistoryResponse]
 )
 async def get_communication_history(
     limit: int = Query(20, ge=1, le=100),
     current_user: dict = Depends(require_roles(UserRole.SUPER_ADMIN))
 ):
-    """
-    Super Admin → View communication history
-    """
 
-    communications = await db.admin_communications.find(
-        {},
-        {"_id": 0}
-    ).sort("created_at", -1).limit(limit).to_list(length=None)
+    pipeline = [
+        {"$sort": {"created_at": -1}},
+        {"$limit": limit},
+
+        {
+            "$lookup": {
+                "from": "universities",
+                "localField": "recipient_university_ids",  # ✅ FIXED
+                "foreignField": "id",
+                "as": "universities_data"
+            }
+        },
+
+        {
+            "$addFields": {
+                "university_names": {
+                    "$map": {
+                        "input": "$universities_data",
+                        "as": "uni",
+                        "in": "$$uni.name"
+                    }
+                }
+            }
+        },
+
+        {
+            "$addFields": {
+                "university_names": {
+                    "$cond": [
+                        "$send_to_all",
+                        ["All Universities"],
+                        "$university_names"
+                    ]
+                }
+            }
+        },
+
+        {
+            "$project": {
+                "_id": 0,
+                "universities_data": 0
+            }
+        }
+    ]
+
+    communications = await db.admin_communications.aggregate(pipeline).to_list(length=None)
 
     return communications
 

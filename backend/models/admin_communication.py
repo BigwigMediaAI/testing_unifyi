@@ -78,11 +78,40 @@ class AdminCommunicationCreate(BaseModel):
 # RESPONSE SCHEMA (OPTIONAL)
 # ==============================
 
-class AdminCommunicationResponse(BaseModel):
+class AdminCommunicationHistoryResponse(BaseModel):
     id: str
+    type: CommunicationType
     subject: str
+    message: str
+
+    sent_by: str
+    recipient_university_ids: List[str]
+    send_to_all: bool
+
     total_recipients: int
     successful: int
     failed: int
     status: CommunicationStatus
+
+    university_names: List[str] = Field(default_factory=list)
+
     created_at: datetime
+    updated_at: datetime
+    id: str
+    type: CommunicationType
+    subject: str
+    sent_by: str
+    message: str 
+
+    recipient_university_ids: List[str]
+    send_to_all: bool
+
+    total_recipients: int
+    successful: int
+    failed: int
+    status: CommunicationStatus
+
+    university_names: Optional[List[str]] = []   # ✅ ADD THIS
+
+    created_at: datetime
+    updated_at: datetime

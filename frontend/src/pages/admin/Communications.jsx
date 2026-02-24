@@ -14,6 +14,15 @@ import {
   CardTitle,
   CardDescription,
 } from "../../components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+
+import { Badge } from "../../components/ui/badge";
+import { Eye } from "lucide-react";
 
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -45,6 +54,24 @@ export default function Communications() {
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const [viewOpen, setViewOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  const openView = (item) => {
+    setSelectedItem(item);
+    setViewOpen(true);
+  };
+
+  const getStatusBadge = (status) => {
+    if (status === "sent")
+      return <Badge className="bg-green-100 text-green-700">Sent</Badge>;
+
+    if (status === "partial")
+      return <Badge className="bg-yellow-100 text-yellow-700">Partial</Badge>;
+
+    return <Badge className="bg-red-100 text-red-700">Failed</Badge>;
+  };
 
   /* ---------------- Quill Setup ---------------- */
 
@@ -256,28 +283,37 @@ export default function Communications() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Subject</TableHead>
+
                     <TableHead>Total</TableHead>
-                    <TableHead>Success</TableHead>
-                    <TableHead>Failed</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
                   {history.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell>{item.subject}</TableCell>
+                      <TableCell className="font-medium">
+                        {item.subject}
+                      </TableCell>
+
                       <TableCell>{item.total_recipients}</TableCell>
-                      <TableCell className="text-green-600">
-                        {item.successful}
-                      </TableCell>
-                      <TableCell className="text-red-600">
-                        {item.failed}
-                      </TableCell>
-                      <TableCell>{item.status}</TableCell>
+
+                      <TableCell>{getStatusBadge(item.status)}</TableCell>
+
                       <TableCell>
                         {new Date(item.created_at).toLocaleDateString()}
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => openView(item)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -287,6 +323,110 @@ export default function Communications() {
           </CardContent>
         </Card>
       </div>
+
+      {/* View Communication Modal */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          {selectedItem && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold">
+                  {selectedItem.subject}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto pr-2 space-y-6 text-sm">
+                {/* Top Section - Two Column Layout */}
+                <div className="grid grid-cols-3 gap-6">
+                  {/* LEFT SIDE - Details */}
+                  <div className="col-span-2 space-y-4">
+                    <div>
+                      <span className="font-semibold">Status:</span>
+                      <div className="mt-1">
+                        {getStatusBadge(selectedItem.status)}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="font-semibold">Total Recipients:</span>
+                      <div className="text-muted-foreground mt-1">
+                        {selectedItem.total_recipients}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="font-semibold">Successful:</span>
+                      <div className="text-green-600 mt-1">
+                        {selectedItem.successful}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="font-semibold">Failed:</span>
+                      <div className="text-red-600 mt-1">
+                        {selectedItem.failed}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="font-semibold">Sent On:</span>
+                      <div className="text-muted-foreground mt-1">
+                        {new Date(selectedItem.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* RIGHT SIDE - Universities */}
+                  <div className="border rounded-md p-4  flex flex-col">
+                    <span className="font-semibold mb-3">Universities</span>
+
+                    <div className="overflow-y-auto space-y-2 max-h-[220px] pr-1">
+                      {selectedItem.send_to_all ? (
+                        <div className="text-muted-foreground">
+                          All Universities
+                        </div>
+                      ) : selectedItem.university_names?.length ? (
+                        selectedItem.university_names.map((uni, index) => (
+                          <div
+                            key={index}
+                            className="text-sm  border rounded px-2 py-1"
+                          >
+                            {uni}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-muted-foreground">
+                          No universities
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email Preview Section - Full Width */}
+                <div>
+                  <div className="font-semibold mb-2">Email Content</div>
+
+                  <div className="border rounded-md p-4 max-h-[350px] overflow-y-auto shadow-sm ">
+                    {selectedItem.message ? (
+                      <div
+                        className="prose prose-sm max-w-none dark:prose-invert"
+                        dangerouslySetInnerHTML={{
+                          __html: selectedItem.message,
+                        }}
+                      />
+                    ) : (
+                      <div className="text-muted-foreground">
+                        No message content available.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
