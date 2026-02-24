@@ -1,6 +1,12 @@
+"use client";
+
 import { useState, useEffect } from "react";
+import { useQuill } from "react-quilljs";
+import "quill/dist/quill.snow.css";
+
 import { AdminLayout } from "../../components/layouts/AdminLayout";
 import { superAdminCommunicationsAPI, superAdminAPI } from "../../lib/api";
+
 import {
   Card,
   CardContent,
@@ -8,10 +14,11 @@ import {
   CardTitle,
   CardDescription,
 } from "../../components/ui/card";
+
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Textarea } from "../../components/ui/textarea";
 import { Checkbox } from "../../components/ui/checkbox";
+
 import {
   Table,
   TableBody,
@@ -20,23 +27,50 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+
 import { toast } from "sonner";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "../../components/ui/popover";
+
 export default function Communications() {
   const [universities, setUniversities] = useState([]);
   const [selectedUniversities, setSelectedUniversities] = useState([]);
   const [sendToAll, setSendToAll] = useState(false);
 
   const [subject, setSubject] = useState("");
-  const [header, setHeader] = useState("");
   const [message, setMessage] = useState("");
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  /* ---------------- Quill Setup ---------------- */
+
+  const { quill, quillRef } = useQuill({
+    theme: "snow",
+    modules: {
+      toolbar: [
+        [{ header: [1, 2, 3, false] }],
+        ["bold", "italic", "underline"],
+        [{ list: "ordered" }, { list: "bullet" }],
+        ["link"],
+        ["clean"],
+      ],
+    },
+  });
+
+  // Sync Quill content to state
+  useEffect(() => {
+    if (quill) {
+      quill.on("text-change", () => {
+        setMessage(quill.root.innerHTML);
+      });
+    }
+  }, [quill]);
+
+  /* ---------------- Data Loading ---------------- */
 
   useEffect(() => {
     loadUniversities();
@@ -47,8 +81,8 @@ export default function Communications() {
     try {
       const res = await superAdminAPI.listUniversities();
       setUniversities(res.data.data || []);
-    } catch (err) {
-      console.error("Failed to load universities");
+    } catch {
+      toast.error("Failed to load universities");
     }
   };
 
@@ -56,22 +90,27 @@ export default function Communications() {
     try {
       const res = await superAdminCommunicationsAPI.getHistory();
       setHistory(res.data || []);
-    } catch (err) {
-      console.error("Failed to load history");
+    } catch {
+      toast.error("Failed to load history");
     }
   };
 
   const toggleUniversity = (id) => {
-    if (selectedUniversities.includes(id)) {
-      setSelectedUniversities(selectedUniversities.filter((u) => u !== id));
-    } else {
-      setSelectedUniversities([...selectedUniversities, id]);
-    }
+    setSelectedUniversities((prev) =>
+      prev.includes(id) ? prev.filter((u) => u !== id) : [...prev, id],
+    );
   };
 
+  /* ---------------- Send Email ---------------- */
+
   const handleSend = async () => {
-    if (!subject || !message) {
-      toast.error("Subject and message are required");
+    if (!subject.trim()) {
+      toast.error("Subject is required");
+      return;
+    }
+
+    if (!message || message === "<p><br></p>") {
+      toast.error("Message cannot be empty");
       return;
     }
 
@@ -85,7 +124,11 @@ export default function Communications() {
 
       const payload = {
         subject,
-        message: `<h2>${header}</h2><div>${message}</div>`,
+        message: `
+          <div style="font-family: Arial, sans-serif; font-size:14px; line-height:1.6;">
+            ${message}
+          </div>
+        `,
         send_to_all: sendToAll,
         university_ids: sendToAll ? [] : selectedUniversities,
       };
@@ -94,44 +137,50 @@ export default function Communications() {
 
       toast.success("Email sent successfully");
 
+      // Reset
       setSubject("");
-      setHeader("");
       setMessage("");
       setSelectedUniversities([]);
       setSendToAll(false);
 
+      if (quill) {
+        quill.setText("");
+      }
+
       loadHistory();
-    } catch (err) {
+    } catch {
       toast.error("Failed to send email");
     } finally {
       setLoading(false);
     }
   };
 
+  /* ---------------- UI ---------------- */
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
+        {/* Page Header */}
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
             University Communications
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Send platform-wide emails to universities
+            Send professional formatted emails to universities
           </p>
         </div>
 
-        {/* Send Email Card */}
+        {/* Compose Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Send Email</CardTitle>
+            <CardTitle>Compose Email</CardTitle>
             <CardDescription>
-              Select recipients and compose message
+              Select recipients and write your message
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {/* Select All */}
+            {/* Send to All */}
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={sendToAll}
@@ -143,57 +192,29 @@ export default function Communications() {
               <span>Send to All Universities</span>
             </div>
 
-            {/* University List */}
+            {/* University Selector */}
             {!sendToAll && (
-              <div className="space-y-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      {selectedUniversities.length === 0
-                        ? "Select Universities"
-                        : `${selectedUniversities.length} selected`}
-                    </Button>
-                  </PopoverTrigger>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    {selectedUniversities.length === 0
+                      ? "Select Universities"
+                      : `${selectedUniversities.length} selected`}
+                  </Button>
+                </PopoverTrigger>
 
-                  <PopoverContent className="w-80 max-h-60 overflow-y-auto">
-                    {universities.map((uni) => (
-                      <div
-                        key={uni.id}
-                        className="flex items-center gap-2 py-1"
-                      >
-                        <Checkbox
-                          checked={selectedUniversities.includes(uni.id)}
-                          onCheckedChange={() => toggleUniversity(uni.id)}
-                        />
-                        <span>{uni.name}</span>
-                      </div>
-                    ))}
-                  </PopoverContent>
-                </Popover>
-
-                {/* Selected Universities Tags */}
-                {selectedUniversities.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedUniversities.map((id) => {
-                      const uni = universities.find((u) => u.id === id);
-                      return (
-                        <div
-                          key={id}
-                          className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                        >
-                          {uni?.name}
-                          <button
-                            onClick={() => toggleUniversity(id)}
-                            className="text-red-500 text-xs"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                <PopoverContent className="w-80 max-h-60 overflow-y-auto">
+                  {universities.map((uni) => (
+                    <div key={uni.id} className="flex items-center gap-2 py-1">
+                      <Checkbox
+                        checked={selectedUniversities.includes(uni.id)}
+                        onCheckedChange={() => toggleUniversity(uni.id)}
+                      />
+                      <span>{uni.name}</span>
+                    </div>
+                  ))}
+                </PopoverContent>
+              </Popover>
             )}
 
             {/* Subject */}
@@ -203,21 +224,12 @@ export default function Communications() {
               onChange={(e) => setSubject(e.target.value)}
             />
 
-            {/* Header */}
-            <Input
-              placeholder="Email Header"
-              value={header}
-              onChange={(e) => setHeader(e.target.value)}
-            />
+            {/* Quill Editor */}
+            <div className="quill-wrapper">
+              <div ref={quillRef} />
+            </div>
 
-            {/* Message */}
-            <Textarea
-              placeholder="Email Body (HTML supported)"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={6}
-            />
-
+            {/* Send Button */}
             <Button
               className="bg-blue-600 hover:bg-blue-700"
               onClick={handleSend}
@@ -228,7 +240,7 @@ export default function Communications() {
           </CardContent>
         </Card>
 
-        {/* History Section */}
+        {/* History */}
         <Card>
           <CardHeader>
             <CardTitle>Communication History</CardTitle>
