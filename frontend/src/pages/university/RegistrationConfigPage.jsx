@@ -4,6 +4,14 @@ import { universityAPI } from "../../lib/api";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import {
   Card,
   CardContent,
@@ -157,7 +165,16 @@ export default function RegistrationConfigPage() {
           discount_type: discountType,
           amount: parseFloat(discountAmount) || 0,
           valid_till: discountValidTill
-            ? new Date(discountValidTill).toISOString()
+            ? new Date(
+                Date.UTC(
+                  discountValidTill.getFullYear(),
+                  discountValidTill.getMonth(),
+                  discountValidTill.getDate(),
+                  23,
+                  59,
+                  59,
+                ),
+              ).toISOString()
             : null,
         },
       });
@@ -504,11 +521,32 @@ export default function RegistrationConfigPage() {
                     {/* Valid Till */}
                     <div className="space-y-2">
                       <Label>Valid Till</Label>
-                      <Input
-                        type="date"
-                        value={discountValidTill}
-                        onChange={(e) => setDiscountValidTill(e.target.value)}
-                      />
+
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {discountValidTill
+                              ? format(discountValidTill, "PPP")
+                              : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={discountValidTill}
+                            onSelect={setDiscountValidTill}
+                            disabled={(date) =>
+                              date < new Date(new Date().setHours(0, 0, 0, 0))
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
                 )}

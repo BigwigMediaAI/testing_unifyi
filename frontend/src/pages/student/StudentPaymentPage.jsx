@@ -245,26 +245,31 @@ export default function StudentPaymentPage() {
                     </div>
 
                     <div className="space-y-1 mb-2 text-sm text-slate-600">
-                      <div className="flex justify-between">
-                        <span>Actual</span>
-                        <span>
-                          ₹{registrationFee.actual_fee?.toLocaleString()}
-                        </span>
-                      </div>
+                      {registrationFee?.discount_amount > 0 ? (
+                        <>
+                          {/* Show Actual Price */}
+                          <div className="flex justify-between">
+                            <span>Actual</span>
+                            <span>
+                              ₹{registrationFee.actual_fee?.toLocaleString()}
+                            </span>
+                          </div>
 
-                      {registrationFee.discount_amount > 0 && (
-                        <div className="flex justify-between text-green-600">
-                          <span>Discount</span>
-                          <span>
-                            -₹
-                            {registrationFee.discount_amount?.toLocaleString()}
-                          </span>
-                        </div>
-                      )}
+                          {/* Show Discount */}
+                          <div className="flex justify-between text-green-600">
+                            <span>Discount</span>
+                            <span>
+                              -₹
+                              {registrationFee.discount_amount?.toLocaleString()}
+                            </span>
+                          </div>
+                        </>
+                      ) : null}
                     </div>
 
+                    {/* Final Price Always Show */}
                     <p className="text-2xl font-bold mb-3">
-                      ₹{registrationFee.final_fee?.toLocaleString()}
+                      ₹{registrationFee?.final_fee?.toLocaleString()}
                     </p>
 
                     {isRegistrationPaid ? (

@@ -874,12 +874,25 @@ async def update_registration_config(
             )
 
         if valid_till:
-            if datetime.fromisoformat(valid_till) < datetime.now(timezone.utc):
-                raise HTTPException(
-                    status_code=400,
-                    detail="Discount valid_till cannot be in the past"
+            try:
+                valid_till_dt = datetime.fromisoformat(
+                    valid_till.replace("Z", "+00:00")
                 )
 
+                now = datetime.now(timezone.utc)
+
+                if valid_till_dt < now:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Discount valid_till cannot be in the past"
+                    )
+
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid valid_till datetime format"
+                )
+            
     # ================= BUILD UPDATE DICT =================
     for key, value in config_data.items():
         if key == "discount" and value is not None:
@@ -2869,30 +2882,65 @@ async def get_registration_fee(
             "message": "Registration fee not required"
         }
 
-    base_fee = config.get("fee_amount", 0)
+    base_fee = float(config.get("fee_amount", 0))
     discount = config.get("discount", {})
 
     discount_amount = 0
 
+    # ================= DISCOUNT CHECK =================
     if discount.get("is_enabled", False):
 
         valid_till = discount.get("valid_till")
+        now = datetime.now(timezone.utc)
 
         if valid_till:
-            valid_till_dt = datetime.fromisoformat(valid_till.replace("Z", "+00:00"))
-            if valid_till_dt >= datetime.now(timezone.utc):
+            try:
+                valid_till_dt = datetime.fromisoformat(
+                    valid_till.replace("Z", "+00:00")
+                )
 
-                if discount.get("discount_type") == "fixed":
-                    discount_amount = discount.get("amount", 0)
+                # ✅ Compare full datetime (works because we store 23:59:59)
+                if valid_till_dt <= now:
 
-                elif discount.get("discount_type") == "percentage":
-                    discount_amount = (base_fee * discount.get("amount", 0)) / 100
+                    # 🔴 AUTO DISABLE IN DB
+                    await db.universities.update_one(
+                        {"id": university_id},
+                        {
+                            "$set": {
+                                "registration_config.discount.is_enabled": False,
+                                "registration_config.discount.amount": 0,
+                                "registration_config.discount.discount_type": None,
+                                "registration_config.discount.valid_till": None,
+                            }
+                        }
+                    )
+
+                    discount_amount = 0
+
+                else:
+                    # ✅ Still valid
+                    if discount.get("discount_type") == "fixed":
+                        discount_amount = min(
+                            discount.get("amount", 0), base_fee
+                        )
+
+                    elif discount.get("discount_type") == "percentage":
+                        percentage = min(discount.get("amount", 0), 100)
+                        discount_amount = (base_fee * percentage) / 100
+
+            except Exception:
+                discount_amount = 0
+
         else:
+            # No expiry → Always active
             if discount.get("discount_type") == "fixed":
-                discount_amount = discount.get("amount", 0)
+                discount_amount = min(
+                    discount.get("amount", 0), base_fee
+                )
 
             elif discount.get("discount_type") == "percentage":
-                discount_amount = (base_fee * discount.get("amount", 0)) / 100
+                percentage = min(discount.get("amount", 0), 100)
+                discount_amount = (base_fee * percentage) / 100
 
     final_fee = max(0, base_fee - discount_amount)
 
@@ -2903,8 +2951,6 @@ async def get_registration_fee(
         "final_fee": round(final_fee, 2),
         "currency": "INR"
     }
-
-
 # ============== DOCUMENT ROUTES ==============
 
 document_router = APIRouter(prefix="/documents", tags=["Documents"])
