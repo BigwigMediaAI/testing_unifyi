@@ -31,6 +31,16 @@ class RegistrationStep(BaseModel):
     config: Dict[str, Any] = {}
 
 
+class DiscountType(str, Enum):
+    FIXED = "fixed"
+    PERCENTAGE = "percentage"
+
+class FeeDiscount(BaseModel):
+    is_enabled: bool = False
+    discount_type: DiscountType = DiscountType.FIXED
+    amount: float = 0
+    valid_till: Optional[datetime] = None
+
 class RegistrationConfig(BaseModel):
     # Step 1: Basic Info (always enabled)
     basic_info_enabled: bool = True
@@ -53,7 +63,7 @@ class RegistrationConfig(BaseModel):
     fee_by_course: Dict[str, float] = {}  # course_id -> amount
     payment_stage: PaymentStage = PaymentStage.AFTER_APPLICATION
     refund_allowed: bool = False
-    
+    discount: FeeDiscount = Field(default_factory=FeeDiscount)
     # Step 6: Final Submission (always enabled)
     final_submission_enabled: bool = True
 
@@ -141,3 +151,4 @@ class RegistrationConfigUpdate(BaseModel):
     fee_by_course: Optional[Dict[str, float]] = None
     payment_stage: Optional[PaymentStage] = None
     refund_allowed: Optional[bool] = None
+    discount: Optional[FeeDiscount] = None

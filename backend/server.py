@@ -814,19 +814,37 @@ async def update_registration_config(
     current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN))
 ):
     """Update registration workflow configuration"""
+
     update_dict = {}
-    for key, value in config.model_dump().items():
-        if value is not None:
-            update_dict[f"registration_config.{key}"] = value if not hasattr(value, 'value') else value.value
-    
-    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
-    
+
+    # Only include provided fields
+    config_data = config.model_dump(exclude_unset=True)
+
+    for key, value in config_data.items():
+
+        # 🔥 Handle nested discount object
+        if key == "discount" and value is not None:
+            for d_key, d_value in value.items():
+                update_dict[f"registration_config.discount.{d_key}"] = (
+                    d_value.value if hasattr(d_value, "value") else d_value
+                )
+        else:
+            update_dict[f"registration_config.{key}"] = (
+                value.value if hasattr(value, "value") else value
+            )
+
+    update_dict["updated_at"] = datetime.now(timezone.utc)
+
     await db.universities.update_one(
         {"id": current_user["university_id"]},
         {"$set": update_dict}
     )
-    
-    university = await db.universities.find_one({"id": current_user["university_id"]}, {"_id": 0})
+
+    university = await db.universities.find_one(
+        {"id": current_user["university_id"]},
+        {"_id": 0}
+    )
+
     return serialize_doc(university)
 
 
