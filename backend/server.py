@@ -820,9 +820,76 @@ async def update_registration_config(
     # Only include provided fields
     config_data = config.model_dump(exclude_unset=True)
 
+    # ================= FEE VALIDATION =================
+    if "fee_amount" in config_data:
+        fee_amount = config_data["fee_amount"]
+
+        if fee_amount < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Fee amount cannot be negative"
+            )
+
+    # ================= DISCOUNT VALIDATION =================
+    if "discount" in config_data:
+        discount = config_data["discount"]
+
+        discount_amount = discount.get("amount", 0)
+        discount_type = discount.get("discount_type")
+        valid_till = discount.get("valid_till")
+
+        # 🔴 Discount negative nahi hona chahiye
+        if discount_amount < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Discount amount cannot be negative"
+            )
+
+        # Get fee_amount (from request or DB safely)
+        fee_amount = config_data.get("fee_amount")
+
+        if fee_amount is None:
+            university = await db.universities.find_one(
+                {"id": current_user["university_id"]},
+                {"registration_config.fee_amount": 1}
+            )
+            fee_amount = university.get("registration_config", {}).get("fee_amount", 0)
+
+        # 🔴 Percentage > 100 not allowed
+        if discount_type == "percentage" and discount_amount > 100:
+            raise HTTPException(
+                status_code=400,
+                detail="Percentage discount cannot exceed 100%"
+            )
+
+        # 🔴 Fixed discount > fee_amount not allowed
+        if discount_type == "fixed" and discount_amount > fee_amount:
+            raise HTTPException(
+                status_code=400,
+                detail="Fixed discount cannot exceed fee amount"
+            )
+
+        # 🔴 valid_till past me nahi hona chahiye
+        if valid_till:
+            now = datetime.now(timezone.utc)
+
+            # Ensure valid_till is datetime object
+            if isinstance(valid_till, str):
+                valid_till = datetime.fromisoformat(valid_till)
+
+            if valid_till.tzinfo is None:
+                valid_till = valid_till.replace(tzinfo=timezone.utc)
+
+            if valid_till < now:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Discount valid_till cannot be in the past"
+                )
+
+    # ================= BUILD UPDATE DICT =================
     for key, value in config_data.items():
 
-        # 🔥 Handle nested discount object
+        # Handle nested discount object
         if key == "discount" and value is not None:
             for d_key, d_value in value.items():
                 update_dict[f"registration_config.discount.{d_key}"] = (
@@ -835,6 +902,7 @@ async def update_registration_config(
 
     update_dict["updated_at"] = datetime.now(timezone.utc)
 
+    # ================= UPDATE DB =================
     await db.universities.update_one(
         {"id": current_user["university_id"]},
         {"$set": update_dict}
@@ -846,7 +914,6 @@ async def update_registration_config(
     )
 
     return serialize_doc(university)
-
 
 @university_router.put("/profile")
 async def update_university_profile(

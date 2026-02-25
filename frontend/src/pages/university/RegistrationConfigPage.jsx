@@ -125,6 +125,7 @@ export default function RegistrationConfigPage() {
 
   const handleSave = async () => {
     setSaving(true);
+
     try {
       await universityAPI.updateRegistrationConfig({
         educational_details_enabled: educationalEnabled,
@@ -136,8 +137,6 @@ export default function RegistrationConfigPage() {
         payment_stage: paymentStage,
         refund_allowed: refundAllowed,
         required_documents: requiredDocuments,
-
-        // 🔥 ADD DISCOUNT
         discount: {
           is_enabled: discountEnabled,
           discount_type: discountType,
@@ -147,10 +146,15 @@ export default function RegistrationConfigPage() {
             : null,
         },
       });
+
       toast.success("Configuration saved successfully");
     } catch (err) {
-      console.error("Failed to save config:", err);
-      toast.error("Failed to save configuration");
+      const backendMessage =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        "Failed to save configuration";
+
+      toast.error(backendMessage);
     } finally {
       setSaving(false);
     }
