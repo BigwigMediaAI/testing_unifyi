@@ -813,12 +813,16 @@ async def update_registration_config(
     config: RegistrationConfigUpdate,
     current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN))
 ):
-    """Update registration workflow configuration"""
+
+    config_data = config.model_dump(exclude_unset=True, mode="json")
+
+    if not config_data:
+        raise HTTPException(
+            status_code=400,
+            detail="No fields provided for update"
+        )
 
     update_dict = {}
-
-    # Only include provided fields
-    config_data = config.model_dump(exclude_unset=True)
 
     # ================= FEE VALIDATION =================
     if "fee_amount" in config_data:
@@ -838,14 +842,13 @@ async def update_registration_config(
         discount_type = discount.get("discount_type")
         valid_till = discount.get("valid_till")
 
-        # 🔴 Discount negative nahi hona chahiye
         if discount_amount < 0:
             raise HTTPException(
                 status_code=400,
                 detail="Discount amount cannot be negative"
             )
 
-        # Get fee_amount (from request or DB safely)
+        # Fetch fee_amount safely
         fee_amount = config_data.get("fee_amount")
 
         if fee_amount is None:
@@ -853,34 +856,25 @@ async def update_registration_config(
                 {"id": current_user["university_id"]},
                 {"registration_config.fee_amount": 1}
             )
+            if not university:
+                raise HTTPException(status_code=404, detail="University not found")
+
             fee_amount = university.get("registration_config", {}).get("fee_amount", 0)
 
-        # 🔴 Percentage > 100 not allowed
         if discount_type == "percentage" and discount_amount > 100:
             raise HTTPException(
                 status_code=400,
                 detail="Percentage discount cannot exceed 100%"
             )
 
-        # 🔴 Fixed discount > fee_amount not allowed
         if discount_type == "fixed" and discount_amount > fee_amount:
             raise HTTPException(
                 status_code=400,
                 detail="Fixed discount cannot exceed fee amount"
             )
 
-        # 🔴 valid_till past me nahi hona chahiye
         if valid_till:
-            now = datetime.now(timezone.utc)
-
-            # Ensure valid_till is datetime object
-            if isinstance(valid_till, str):
-                valid_till = datetime.fromisoformat(valid_till)
-
-            if valid_till.tzinfo is None:
-                valid_till = valid_till.replace(tzinfo=timezone.utc)
-
-            if valid_till < now:
+            if datetime.fromisoformat(valid_till) < datetime.now(timezone.utc):
                 raise HTTPException(
                     status_code=400,
                     detail="Discount valid_till cannot be in the past"
@@ -888,21 +882,14 @@ async def update_registration_config(
 
     # ================= BUILD UPDATE DICT =================
     for key, value in config_data.items():
-
-        # Handle nested discount object
         if key == "discount" and value is not None:
             for d_key, d_value in value.items():
-                update_dict[f"registration_config.discount.{d_key}"] = (
-                    d_value.value if hasattr(d_value, "value") else d_value
-                )
+                update_dict[f"registration_config.discount.{d_key}"] = d_value
         else:
-            update_dict[f"registration_config.{key}"] = (
-                value.value if hasattr(value, "value") else value
-            )
+            update_dict[f"registration_config.{key}"] = value
 
     update_dict["updated_at"] = datetime.now(timezone.utc)
 
-    # ================= UPDATE DB =================
     await db.universities.update_one(
         {"id": current_user["university_id"]},
         {"$set": update_dict}
@@ -914,6 +901,7 @@ async def update_registration_config(
     )
 
     return serialize_doc(university)
+
 
 @university_router.put("/profile")
 async def update_university_profile(
@@ -2858,6 +2846,63 @@ async def get_university_info(
     if not university:
         raise HTTPException(status_code=404, detail="University not found")
     return serialize_doc(university)
+
+@student_router.get("/registration-fee")
+async def get_registration_fee(
+    current_user: dict = Depends(require_roles(UserRole.STUDENT))
+):
+    university_id = current_user["university_id"]
+
+    university = await db.universities.find_one(
+        {"id": university_id},
+        {"registration_config": 1, "_id": 0}
+    )
+
+    if not university:
+        raise HTTPException(status_code=404, detail="University not found")
+
+    config = university.get("registration_config", {})
+
+    if not config.get("fee_enabled", False):
+        return {
+            "fee_enabled": False,
+            "message": "Registration fee not required"
+        }
+
+    base_fee = config.get("fee_amount", 0)
+    discount = config.get("discount", {})
+
+    discount_amount = 0
+
+    if discount.get("is_enabled", False):
+
+        valid_till = discount.get("valid_till")
+
+        if valid_till:
+            valid_till_dt = datetime.fromisoformat(valid_till.replace("Z", "+00:00"))
+            if valid_till_dt >= datetime.now(timezone.utc):
+
+                if discount.get("discount_type") == "fixed":
+                    discount_amount = discount.get("amount", 0)
+
+                elif discount.get("discount_type") == "percentage":
+                    discount_amount = (base_fee * discount.get("amount", 0)) / 100
+        else:
+            if discount.get("discount_type") == "fixed":
+                discount_amount = discount.get("amount", 0)
+
+            elif discount.get("discount_type") == "percentage":
+                discount_amount = (base_fee * discount.get("amount", 0)) / 100
+
+    final_fee = max(0, base_fee - discount_amount)
+
+    return {
+        "fee_enabled": True,
+        "actual_fee": round(base_fee, 2),
+        "discount_amount": round(discount_amount, 2),
+        "final_fee": round(final_fee, 2),
+        "currency": "INR"
+    }
 
 
 # ============== DOCUMENT ROUTES ==============

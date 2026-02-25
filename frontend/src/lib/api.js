@@ -142,6 +142,7 @@ export const studentAPI = {
     api.post("/student/register", { ...data, university_code: universityCode }),
   getRegistrationConfig: () => api.get("/student/registration-config"),
   getUniversityInfo: () => api.get("/student/university-info"),
+  getRegistrationFee: () => api.get("/student/registration-fee"),
 };
 
 // Document APIs

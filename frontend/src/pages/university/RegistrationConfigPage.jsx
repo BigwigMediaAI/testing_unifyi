@@ -123,8 +123,23 @@ export default function RegistrationConfigPage() {
     }
   };
 
+  useEffect(() => {
+    if (!feeEnabled) {
+      setDiscountEnabled(false);
+    }
+  }, [feeEnabled]);
+
   const handleSave = async () => {
     setSaving(true);
+
+    if (
+      discountEnabled &&
+      discountType === "percentage" &&
+      discountAmount > 100
+    ) {
+      toast.error("Percentage cannot exceed 100%");
+      return;
+    }
 
     try {
       await universityAPI.updateRegistrationConfig({
