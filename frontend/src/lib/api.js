@@ -147,12 +147,25 @@ export const studentAPI = {
 
 // Document APIs
 export const documentAPI = {
-  upload: (data) => api.post("/documents/upload", data),
+  upload: (formData) => {
+    const token = localStorage.getItem("unify-token");
+
+    return api.post("/documents/upload", formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+
   getApplicationDocuments: (applicationId) =>
     api.get(`/documents/application/${applicationId}`),
+
   getMyDocuments: () => api.get("/documents/my-documents"),
+
   verify: (documentId, data) =>
     api.put(`/documents/${documentId}/verify`, data),
+
   delete: (documentId) => api.delete(`/documents/${documentId}`),
 };
 

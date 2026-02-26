@@ -1,20 +1,48 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { StudentLayout } from '../../components/layouts/StudentLayout';
-import { applicationAPI, studentAPI, universityAPI, documentAPI } from '../../lib/api';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Progress } from '../../components/ui/progress';
-import { Badge } from '../../components/ui/badge';
-import { 
-  FileText, Upload, ClipboardCheck, CreditCard, CheckCircle, 
-  ArrowRight, ArrowLeft, Save, Trash2, File, Image, AlertCircle, X
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { StudentLayout } from "../../components/layouts/StudentLayout";
+import {
+  applicationAPI,
+  studentAPI,
+  universityAPI,
+  documentAPI,
+} from "../../lib/api";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Textarea } from "../../components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "../../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { Progress } from "../../components/ui/progress";
+import { Badge } from "../../components/ui/badge";
+import {
+  FileText,
+  Upload,
+  ClipboardCheck,
+  CreditCard,
+  CheckCircle,
+  ArrowRight,
+  ArrowLeft,
+  Save,
+  Trash2,
+  File,
+  Image,
+  AlertCircle,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
 
 export default function StudentApplicationPage() {
   const navigate = useNavigate();
@@ -23,32 +51,38 @@ export default function StudentApplicationPage() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  
+
   // Basic Info Form
   const [basicInfo, setBasicInfo] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    date_of_birth: '',
-    gender: '',
-    address: '',
-    city: '',
-    state: '',
-    pincode: '',
-    guardian_name: '',
-    guardian_phone: ''
+    name: "",
+    email: "",
+    phone: "",
+    date_of_birth: "",
+    gender: "",
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
+    guardian_name: "",
+    guardian_phone: "",
   });
-  
+
   // Educational Details
   const [educationalDetails, setEducationalDetails] = useState([
-    { qualification: '', board_university: '', passing_year: '', marks_percentage: '', grade: '' }
+    {
+      qualification: "",
+      board_university: "",
+      passing_year: "",
+      marks_percentage: "",
+      grade: "",
+    },
   ]);
-  
+
   // Course Selection
-  const [selectedCourse, setSelectedCourse] = useState('');
-  
+  const [selectedCourse, setSelectedCourse] = useState("");
+
   // Documents
   const [documents, setDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -64,10 +98,10 @@ export default function StudentApplicationPage() {
     try {
       setCreating(true);
       await applicationAPI.create({});
-      toast.success('Application created! You can now fill in your details.');
+      toast.success("Application created! You can now fill in your details.");
       await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create application');
+      toast.error(err.response?.data?.detail || "Failed to create application");
     } finally {
       setCreating(false);
     }
@@ -77,21 +111,21 @@ export default function StudentApplicationPage() {
     try {
       const [appsRes, configRes] = await Promise.all([
         applicationAPI.getMyApplications(),
-        studentAPI.getRegistrationConfig()
+        studentAPI.getRegistrationConfig(),
       ]);
-      
+
       const apps = appsRes.data.data || [];
       const regConfig = configRes.data;
-      
+
       setConfig(regConfig);
-      
+
       if (apps.length > 0) {
         const app = apps[0];
         setApplication(app);
-        
+
         // Load existing data
         if (app.basic_info) {
-          setBasicInfo(prev => ({ ...prev, ...app.basic_info }));
+          setBasicInfo((prev) => ({ ...prev, ...app.basic_info }));
         }
         if (app.educational_details?.length > 0) {
           setEducationalDetails(app.educational_details);
@@ -99,33 +133,33 @@ export default function StudentApplicationPage() {
         if (app.course_id) {
           setSelectedCourse(app.course_id);
         }
-        
+
         // Load documents
         try {
           const docsRes = await documentAPI.getApplicationDocuments(app.id);
           setDocuments(docsRes.data.data || []);
         } catch (err) {
-          console.log('No documents found');
+          console.log("No documents found");
         }
-        
+
         // Set current step
         const steps = regConfig.steps || [];
         const currentStep = app.current_step;
-        const stepIndex = steps.findIndex(s => s.step === currentStep);
+        const stepIndex = steps.findIndex((s) => s.step === currentStep);
         setCurrentStepIndex(stepIndex >= 0 ? stepIndex : 0);
       }
-      
+
       // Load courses
       try {
         const coursesRes = await universityAPI.listCourses();
         setCourses(coursesRes.data.data || []);
       } catch (err) {
         // Courses API might not be accessible for students
-        console.log('Courses not available');
+        console.log("Courses not available");
       }
     } catch (err) {
-      console.error('Failed to load data:', err);
-      toast.error('Failed to load application data');
+      console.error("Failed to load data:", err);
+      toast.error("Failed to load application data");
     } finally {
       setLoading(false);
     }
@@ -133,17 +167,18 @@ export default function StudentApplicationPage() {
 
   const steps = config?.steps || [];
   const currentStep = steps[currentStepIndex];
-  const progress = steps.length > 0 ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
+  const progress =
+    steps.length > 0 ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
 
   const saveBasicInfo = async () => {
     if (!application) return;
     setSaving(true);
     try {
       await applicationAPI.updateBasicInfo(application.id, basicInfo);
-      toast.success('Basic information saved');
+      toast.success("Basic information saved");
       await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to save');
+      toast.error(err.response?.data?.detail || "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -153,11 +188,14 @@ export default function StudentApplicationPage() {
     if (!application) return;
     setSaving(true);
     try {
-      await applicationAPI.updateEducationalDetails(application.id, educationalDetails);
-      toast.success('Educational details saved');
+      await applicationAPI.updateEducationalDetails(
+        application.id,
+        educationalDetails,
+      );
+      toast.success("Educational details saved");
       await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to save');
+      toast.error(err.response?.data?.detail || "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -168,10 +206,10 @@ export default function StudentApplicationPage() {
     setSaving(true);
     try {
       await applicationAPI.submit(application.id);
-      toast.success('Application submitted successfully!');
-      navigate('/student');
+      toast.success("Application submitted successfully!");
+      navigate("/student");
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to submit application');
+      toast.error(err.response?.data?.detail || "Failed to submit application");
     } finally {
       setSaving(false);
     }
@@ -192,7 +230,13 @@ export default function StudentApplicationPage() {
   const addEducationRow = () => {
     setEducationalDetails([
       ...educationalDetails,
-      { qualification: '', board_university: '', passing_year: '', marks_percentage: '', grade: '' }
+      {
+        qualification: "",
+        board_university: "",
+        passing_year: "",
+        marks_percentage: "",
+        grade: "",
+      },
     ]);
   };
 
@@ -206,43 +250,46 @@ export default function StudentApplicationPage() {
   const handleFileSelect = async (e, documentName) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    // Validate file type
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+    ];
     if (!allowedTypes.includes(file.type)) {
-      toast.error('Invalid file type. Only PDF, JPG, and PNG files are allowed.');
+      toast.error("Invalid file type. Only PDF, JPG, PNG allowed.");
       return;
     }
-    
-    // Validate file size (5MB)
+
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size exceeds 5MB limit.');
+      toast.error("File size exceeds 5MB.");
       return;
     }
-    
+
     setUploading(true);
-    
+
     try {
-      // Convert file to base64
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64Data = reader.result.split(',')[1]; // Remove data:... prefix
-        
-        await documentAPI.upload({
-          application_id: application.id,
-          document_name: documentName,
-          file_name: file.name,
-          file_type: file.name.split('.').pop(),
-          file_size: file.size,
-          file_data: base64Data
-        });
-        
-        toast.success(`${documentName} uploaded successfully`);
-        await loadData(); // Refresh documents
-      };
-      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append("application_id", application.id);
+      formData.append("document_name", documentName);
+      formData.append("file", file);
+
+      await documentAPI.upload(formData);
+
+      toast.success(`${documentName} uploaded successfully`);
+      await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to upload document');
+      const detail = err.response?.data?.detail;
+
+      const message =
+        typeof detail === "string"
+          ? detail
+          : Array.isArray(detail)
+            ? detail[0]?.msg
+            : "Upload failed";
+
+      toast.error(message);
     } finally {
       setUploading(false);
     }
@@ -250,36 +297,40 @@ export default function StudentApplicationPage() {
 
   const handleDeleteDocument = async (documentId, documentName) => {
     if (!confirm(`Are you sure you want to delete ${documentName}?`)) return;
-    
+
     try {
       await documentAPI.delete(documentId);
-      toast.success('Document deleted');
+      toast.success("Document deleted");
       await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to delete document');
+      toast.error(err.response?.data?.detail || "Failed to delete document");
     }
   };
 
   const getDocumentStatus = (docName) => {
-    const doc = documents.find(d => d.name === docName);
+    const doc = documents.find((d) => d.name === docName);
     return doc;
   };
 
   const defaultSteps = [
-    { step: 'basic_info', label: 'Basic Information', is_enabled: true },
-    { step: 'educational_details', label: 'Educational Details', is_enabled: true },
-    { step: 'course_selection', label: 'Course Selection', is_enabled: true },
-    { step: 'document_upload', label: 'Document Upload', is_enabled: true },
-    { step: 'final_submission', label: 'Review & Submit', is_enabled: true }
+    { step: "basic_info", label: "Basic Information", is_enabled: true },
+    {
+      step: "educational_details",
+      label: "Educational Details",
+      is_enabled: true,
+    },
+    { step: "course_selection", label: "Course Selection", is_enabled: true },
+    { step: "document_upload", label: "Document Upload", is_enabled: true },
+    { step: "final_submission", label: "Review & Submit", is_enabled: true },
   ];
 
   const requiredDocuments = config?.config?.required_documents || [
-    { name: '10th Marksheet', is_mandatory: true },
-    { name: '12th Marksheet', is_mandatory: true },
-    { name: 'Photo', is_mandatory: true },
-    { name: 'Signature', is_mandatory: true },
-    { name: 'ID Proof', is_mandatory: true },
-    { name: 'Address Proof', is_mandatory: false },
+    { name: "10th Marksheet", is_mandatory: true },
+    { name: "12th Marksheet", is_mandatory: true },
+    { name: "Photo", is_mandatory: true },
+    { name: "Signature", is_mandatory: true },
+    { name: "ID Proof", is_mandatory: true },
+    { name: "Address Proof", is_mandatory: false },
   ];
 
   if (loading) {
@@ -295,7 +346,10 @@ export default function StudentApplicationPage() {
   if (!application) {
     return (
       <StudentLayout>
-        <div className="max-w-2xl mx-auto space-y-6" data-testid="no-application-view">
+        <div
+          className="max-w-2xl mx-auto space-y-6"
+          data-testid="no-application-view"
+        >
           <Card>
             <CardHeader className="text-center">
               <div className="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
@@ -308,11 +362,12 @@ export default function StudentApplicationPage() {
             </CardHeader>
             <CardContent className="text-center space-y-4">
               <p className="text-slate-600 dark:text-slate-400">
-                Click the button below to start your application. You'll be guided through multiple steps
-                to provide your personal information, educational details, and required documents.
+                Click the button below to start your application. You'll be
+                guided through multiple steps to provide your personal
+                information, educational details, and required documents.
               </p>
-              <Button 
-                onClick={createNewApplication} 
+              <Button
+                onClick={createNewApplication}
                 disabled={creating}
                 className="bg-blue-600 hover:bg-blue-700"
                 size="lg"
@@ -332,7 +387,7 @@ export default function StudentApplicationPage() {
               </Button>
             </CardContent>
           </Card>
-          
+
           {/* Application Steps Preview */}
           <Card>
             <CardHeader>
@@ -346,13 +401,20 @@ export default function StudentApplicationPage() {
                       {index + 1}
                     </div>
                     <div>
-                      <h4 className="font-medium text-slate-900 dark:text-white">{step.label}</h4>
+                      <h4 className="font-medium text-slate-900 dark:text-white">
+                        {step.label}
+                      </h4>
                       <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {step.step === 'basic_info' && 'Provide your personal details like name, email, phone, and address'}
-                        {step.step === 'educational_details' && 'Enter your educational qualifications and academic history'}
-                        {step.step === 'course_selection' && 'Choose your preferred course and department'}
-                        {step.step === 'document_upload' && 'Upload required documents like ID proof, marksheets, etc.'}
-                        {step.step === 'final_submission' && 'Review your application and submit'}
+                        {step.step === "basic_info" &&
+                          "Provide your personal details like name, email, phone, and address"}
+                        {step.step === "educational_details" &&
+                          "Enter your educational qualifications and academic history"}
+                        {step.step === "course_selection" &&
+                          "Choose your preferred course and department"}
+                        {step.step === "document_upload" &&
+                          "Upload required documents like ID proof, marksheets, etc."}
+                        {step.step === "final_submission" &&
+                          "Review your application and submit"}
                       </p>
                     </div>
                   </div>
@@ -367,12 +429,14 @@ export default function StudentApplicationPage() {
 
   const renderStepContent = () => {
     switch (currentStep?.step) {
-      case 'basic_info':
+      case "basic_info":
         return (
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
-              <CardDescription>Please provide your personal details</CardDescription>
+              <CardDescription>
+                Please provide your personal details
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-6">
@@ -381,7 +445,9 @@ export default function StudentApplicationPage() {
                   <Input
                     id="name"
                     value={basicInfo.name}
-                    onChange={(e) => setBasicInfo({ ...basicInfo, name: e.target.value })}
+                    onChange={(e) =>
+                      setBasicInfo({ ...basicInfo, name: e.target.value })
+                    }
                     required
                     data-testid="basic-name"
                   />
@@ -392,7 +458,9 @@ export default function StudentApplicationPage() {
                     id="email"
                     type="email"
                     value={basicInfo.email}
-                    onChange={(e) => setBasicInfo({ ...basicInfo, email: e.target.value })}
+                    onChange={(e) =>
+                      setBasicInfo({ ...basicInfo, email: e.target.value })
+                    }
                     required
                     data-testid="basic-email"
                   />
@@ -402,7 +470,9 @@ export default function StudentApplicationPage() {
                   <Input
                     id="phone"
                     value={basicInfo.phone}
-                    onChange={(e) => setBasicInfo({ ...basicInfo, phone: e.target.value })}
+                    onChange={(e) =>
+                      setBasicInfo({ ...basicInfo, phone: e.target.value })
+                    }
                     required
                     data-testid="basic-phone"
                   />
@@ -413,13 +483,23 @@ export default function StudentApplicationPage() {
                     id="dob"
                     type="date"
                     value={basicInfo.date_of_birth}
-                    onChange={(e) => setBasicInfo({ ...basicInfo, date_of_birth: e.target.value })}
+                    onChange={(e) =>
+                      setBasicInfo({
+                        ...basicInfo,
+                        date_of_birth: e.target.value,
+                      })
+                    }
                     data-testid="basic-dob"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gender">Gender</Label>
-                  <Select value={basicInfo.gender} onValueChange={(v) => setBasicInfo({ ...basicInfo, gender: v })}>
+                  <Select
+                    value={basicInfo.gender}
+                    onValueChange={(v) =>
+                      setBasicInfo({ ...basicInfo, gender: v })
+                    }
+                  >
                     <SelectTrigger data-testid="basic-gender">
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
@@ -435,7 +515,12 @@ export default function StudentApplicationPage() {
                   <Input
                     id="guardian_name"
                     value={basicInfo.guardian_name}
-                    onChange={(e) => setBasicInfo({ ...basicInfo, guardian_name: e.target.value })}
+                    onChange={(e) =>
+                      setBasicInfo({
+                        ...basicInfo,
+                        guardian_name: e.target.value,
+                      })
+                    }
                     data-testid="basic-guardian"
                   />
                 </div>
@@ -444,7 +529,9 @@ export default function StudentApplicationPage() {
                   <Textarea
                     id="address"
                     value={basicInfo.address}
-                    onChange={(e) => setBasicInfo({ ...basicInfo, address: e.target.value })}
+                    onChange={(e) =>
+                      setBasicInfo({ ...basicInfo, address: e.target.value })
+                    }
                     data-testid="basic-address"
                   />
                 </div>
@@ -453,7 +540,9 @@ export default function StudentApplicationPage() {
                   <Input
                     id="city"
                     value={basicInfo.city}
-                    onChange={(e) => setBasicInfo({ ...basicInfo, city: e.target.value })}
+                    onChange={(e) =>
+                      setBasicInfo({ ...basicInfo, city: e.target.value })
+                    }
                     data-testid="basic-city"
                   />
                 </div>
@@ -462,27 +551,36 @@ export default function StudentApplicationPage() {
                   <Input
                     id="state"
                     value={basicInfo.state}
-                    onChange={(e) => setBasicInfo({ ...basicInfo, state: e.target.value })}
+                    onChange={(e) =>
+                      setBasicInfo({ ...basicInfo, state: e.target.value })
+                    }
                     data-testid="basic-state"
                   />
                 </div>
               </div>
               <div className="mt-6 flex justify-end">
-                <Button onClick={saveBasicInfo} disabled={saving} className="bg-blue-600 hover:bg-blue-700" data-testid="save-basic-btn">
+                <Button
+                  onClick={saveBasicInfo}
+                  disabled={saving}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="save-basic-btn"
+                >
                   <Save className="h-4 w-4 mr-2" />
-                  {saving ? 'Saving...' : 'Save & Continue'}
+                  {saving ? "Saving..." : "Save & Continue"}
                 </Button>
               </div>
             </CardContent>
           </Card>
         );
 
-      case 'educational_details':
+      case "educational_details":
         return (
           <Card>
             <CardHeader>
               <CardTitle>Educational Details</CardTitle>
-              <CardDescription>Provide your educational qualifications</CardDescription>
+              <CardDescription>
+                Provide your educational qualifications
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
@@ -496,7 +594,9 @@ export default function StudentApplicationPage() {
                         <Label>Qualification</Label>
                         <Select
                           value={edu.qualification}
-                          onValueChange={(v) => updateEducationRow(index, 'qualification', v)}
+                          onValueChange={(v) =>
+                            updateEducationRow(index, "qualification", v)
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select qualification" />
@@ -504,8 +604,12 @@ export default function StudentApplicationPage() {
                           <SelectContent>
                             <SelectItem value="10th">10th Standard</SelectItem>
                             <SelectItem value="12th">12th Standard</SelectItem>
-                            <SelectItem value="graduation">Graduation</SelectItem>
-                            <SelectItem value="post_graduation">Post Graduation</SelectItem>
+                            <SelectItem value="graduation">
+                              Graduation
+                            </SelectItem>
+                            <SelectItem value="post_graduation">
+                              Post Graduation
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -513,7 +617,13 @@ export default function StudentApplicationPage() {
                         <Label>Board/University</Label>
                         <Input
                           value={edu.board_university}
-                          onChange={(e) => updateEducationRow(index, 'board_university', e.target.value)}
+                          onChange={(e) =>
+                            updateEducationRow(
+                              index,
+                              "board_university",
+                              e.target.value,
+                            )
+                          }
                           placeholder="e.g., CBSE, State Board"
                         />
                       </div>
@@ -522,7 +632,13 @@ export default function StudentApplicationPage() {
                         <Input
                           type="number"
                           value={edu.passing_year}
-                          onChange={(e) => updateEducationRow(index, 'passing_year', e.target.value)}
+                          onChange={(e) =>
+                            updateEducationRow(
+                              index,
+                              "passing_year",
+                              e.target.value,
+                            )
+                          }
                           placeholder="e.g., 2023"
                         />
                       </div>
@@ -532,22 +648,35 @@ export default function StudentApplicationPage() {
                           type="number"
                           step="0.01"
                           value={edu.marks_percentage}
-                          onChange={(e) => updateEducationRow(index, 'marks_percentage', e.target.value)}
+                          onChange={(e) =>
+                            updateEducationRow(
+                              index,
+                              "marks_percentage",
+                              e.target.value,
+                            )
+                          }
                           placeholder="e.g., 85.5"
                         />
                       </div>
                     </div>
                   </div>
                 ))}
-                
-                <Button variant="outline" onClick={addEducationRow} className="w-full">
+
+                <Button
+                  variant="outline"
+                  onClick={addEducationRow}
+                  className="w-full"
+                >
                   + Add Another Qualification
                 </Button>
-                
+
                 {courses.length > 0 && (
                   <div className="pt-4 border-t space-y-2">
                     <Label>Course Applying For</Label>
-                    <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+                    <Select
+                      value={selectedCourse}
+                      onValueChange={setSelectedCourse}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select course" />
                       </SelectTrigger>
@@ -563,45 +692,56 @@ export default function StudentApplicationPage() {
                 )}
               </div>
               <div className="mt-6 flex justify-end">
-                <Button onClick={saveEducationalDetails} disabled={saving} className="bg-blue-600 hover:bg-blue-700" data-testid="save-edu-btn">
+                <Button
+                  onClick={saveEducationalDetails}
+                  disabled={saving}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="save-edu-btn"
+                >
                   <Save className="h-4 w-4 mr-2" />
-                  {saving ? 'Saving...' : 'Save & Continue'}
+                  {saving ? "Saving..." : "Save & Continue"}
                 </Button>
               </div>
             </CardContent>
           </Card>
         );
 
-      case 'documents':
+      case "documents":
         return (
           <Card>
             <CardHeader>
               <CardTitle>Document Upload</CardTitle>
-              <CardDescription>Upload required documents for your application</CardDescription>
+              <CardDescription>
+                Upload required documents for your application
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {requiredDocuments.map((reqDoc, index) => {
                   const uploadedDoc = getDocumentStatus(reqDoc.name);
-                  
+
                   return (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       className="p-4 border rounded-lg flex items-center justify-between gap-4"
-                      data-testid={`doc-row-${reqDoc.name.replace(/\s+/g, '-').toLowerCase()}`}
+                      data-testid={`doc-row-${reqDoc.name.replace(/\s+/g, "-").toLowerCase()}`}
                     >
                       <div className="flex items-center gap-3 flex-1">
-                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                          uploadedDoc 
-                            ? uploadedDoc.status === 'verified' 
-                              ? 'bg-green-100 dark:bg-green-900/30' 
-                              : uploadedDoc.status === 'rejected'
-                                ? 'bg-red-100 dark:bg-red-900/30'
-                                : 'bg-blue-100 dark:bg-blue-900/30'
-                            : 'bg-slate-100 dark:bg-slate-800'
-                        }`}>
-                          {uploadedDoc?.file_type === 'pdf' ? (
-                            <File className={`h-5 w-5 ${uploadedDoc ? 'text-blue-600' : 'text-slate-400'}`} />
+                        <div
+                          className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                            uploadedDoc
+                              ? uploadedDoc.status === "verified"
+                                ? "bg-green-100 dark:bg-green-900/30"
+                                : uploadedDoc.status === "rejected"
+                                  ? "bg-red-100 dark:bg-red-900/30"
+                                  : "bg-blue-100 dark:bg-blue-900/30"
+                              : "bg-slate-100 dark:bg-slate-800"
+                          }`}
+                        >
+                          {uploadedDoc?.file_type === "pdf" ? (
+                            <File
+                              className={`h-5 w-5 ${uploadedDoc ? "text-blue-600" : "text-slate-400"}`}
+                            />
                           ) : uploadedDoc ? (
                             <Image className="h-5 w-5 text-blue-600" />
                           ) : (
@@ -611,44 +751,57 @@ export default function StudentApplicationPage() {
                         <div className="flex-1">
                           <p className="font-medium flex items-center gap-2">
                             {reqDoc.name}
-                            {reqDoc.is_mandatory && <span className="text-red-500 text-xs">*</span>}
+                            {reqDoc.is_mandatory && (
+                              <span className="text-red-500 text-xs">*</span>
+                            )}
                           </p>
                           {uploadedDoc ? (
-                            <p className="text-sm text-slate-500">{uploadedDoc.file_name}</p>
+                            <p className="text-sm text-slate-500">
+                              {uploadedDoc.file_name}
+                            </p>
                           ) : (
-                            <p className="text-sm text-slate-400">PDF, JPG, PNG (Max 5MB)</p>
+                            <p className="text-sm text-slate-400">
+                              PDF, JPG, PNG (Max 5MB)
+                            </p>
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         {uploadedDoc && (
                           <>
-                            <Badge 
+                            <Badge
                               className={
-                                uploadedDoc.status === 'verified' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : uploadedDoc.status === 'rejected'
-                                    ? 'bg-red-100 text-red-800'
-                                    : 'bg-yellow-100 text-yellow-800'
+                                uploadedDoc.status === "verified"
+                                  ? "bg-green-100 text-green-800"
+                                  : uploadedDoc.status === "rejected"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-yellow-100 text-yellow-800"
                               }
                             >
-                              {uploadedDoc.status === 'uploaded' ? 'Pending Review' : uploadedDoc.status}
+                              {uploadedDoc.status === "uploaded"
+                                ? "Pending Review"
+                                : uploadedDoc.status}
                             </Badge>
-                            {uploadedDoc.status !== 'verified' && (
+                            {uploadedDoc.status !== "verified" && (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleDeleteDocument(uploadedDoc.id, uploadedDoc.name)}
+                                onClick={() =>
+                                  handleDeleteDocument(
+                                    uploadedDoc.id,
+                                    uploadedDoc.name,
+                                  )
+                                }
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                data-testid={`delete-doc-${reqDoc.name.replace(/\s+/g, '-').toLowerCase()}`}
+                                data-testid={`delete-doc-${reqDoc.name.replace(/\s+/g, "-").toLowerCase()}`}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             )}
                           </>
                         )}
-                        
+
                         {!uploadedDoc && (
                           <>
                             <input
@@ -662,17 +815,19 @@ export default function StudentApplicationPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => document.getElementById(`file-${index}`).click()}
+                              onClick={() =>
+                                document.getElementById(`file-${index}`).click()
+                              }
                               disabled={uploading}
-                              data-testid={`upload-${reqDoc.name.replace(/\s+/g, '-').toLowerCase()}`}
+                              data-testid={`upload-${reqDoc.name.replace(/\s+/g, "-").toLowerCase()}`}
                             >
                               <Upload className="h-4 w-4 mr-2" />
-                              {uploading ? 'Uploading...' : 'Upload'}
+                              {uploading ? "Uploading..." : "Upload"}
                             </Button>
                           </>
                         )}
-                        
-                        {uploadedDoc && uploadedDoc.status === 'rejected' && (
+
+                        {uploadedDoc && uploadedDoc.status === "rejected" && (
                           <>
                             <input
                               type="file"
@@ -680,7 +835,10 @@ export default function StudentApplicationPage() {
                               className="hidden"
                               accept=".pdf,.jpg,.jpeg,.png"
                               onChange={(e) => {
-                                handleDeleteDocument(uploadedDoc.id, uploadedDoc.name).then(() => {
+                                handleDeleteDocument(
+                                  uploadedDoc.id,
+                                  uploadedDoc.name,
+                                ).then(() => {
                                   handleFileSelect(e, reqDoc.name);
                                 });
                               }}
@@ -689,7 +847,11 @@ export default function StudentApplicationPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => document.getElementById(`file-reupload-${index}`).click()}
+                              onClick={() =>
+                                document
+                                  .getElementById(`file-reupload-${index}`)
+                                  .click()
+                              }
                               disabled={uploading}
                             >
                               Re-upload
@@ -700,23 +862,29 @@ export default function StudentApplicationPage() {
                     </div>
                   );
                 })}
-                
+
                 {/* Upload Status Summary */}
                 <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {documents.length === requiredDocuments.filter(d => d.is_mandatory).length ? (
+                      {documents.length ===
+                      requiredDocuments.filter((d) => d.is_mandatory).length ? (
                         <CheckCircle className="h-5 w-5 text-green-600" />
                       ) : (
                         <AlertCircle className="h-5 w-5 text-yellow-600" />
                       )}
                       <span className="font-medium">
-                        {documents.length} of {requiredDocuments.filter(d => d.is_mandatory).length} mandatory documents uploaded
+                        {documents.length} of{" "}
+                        {requiredDocuments.filter((d) => d.is_mandatory).length}{" "}
+                        mandatory documents uploaded
                       </span>
                     </div>
-                    <Button 
-                      onClick={goNext} 
-                      disabled={documents.length < requiredDocuments.filter(d => d.is_mandatory).length}
+                    <Button
+                      onClick={goNext}
+                      disabled={
+                        documents.length <
+                        requiredDocuments.filter((d) => d.is_mandatory).length
+                      }
                       className="bg-blue-600 hover:bg-blue-700"
                     >
                       Continue
@@ -729,18 +897,25 @@ export default function StudentApplicationPage() {
           </Card>
         );
 
-      case 'entrance_test':
+      case "entrance_test":
         return (
           <Card>
             <CardHeader>
               <CardTitle>Entrance Test</CardTitle>
-              <CardDescription>Complete your entrance examination</CardDescription>
+              <CardDescription>
+                Complete your entrance examination
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8">
                 <ClipboardCheck className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-600 mb-4">You will be redirected to the test portal when ready</p>
-                <Button onClick={() => navigate('/student/test')} className="bg-blue-600 hover:bg-blue-700">
+                <p className="text-slate-600 mb-4">
+                  You will be redirected to the test portal when ready
+                </p>
+                <Button
+                  onClick={() => navigate("/student/test")}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
                   Start Test
                 </Button>
               </div>
@@ -748,7 +923,7 @@ export default function StudentApplicationPage() {
           </Card>
         );
 
-      case 'payment':
+      case "payment":
         return (
           <Card>
             <CardHeader>
@@ -758,9 +933,16 @@ export default function StudentApplicationPage() {
             <CardContent>
               <div className="text-center py-8">
                 <CreditCard className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-xl font-bold mb-2">Amount: ₹{config?.config?.fee_amount || 0}</p>
-                <p className="text-slate-600 mb-4">Click below to proceed with payment</p>
-                <Button onClick={() => navigate('/student/payment')} className="bg-blue-600 hover:bg-blue-700">
+                <p className="text-xl font-bold mb-2">
+                  Amount: ₹{config?.config?.fee_amount || 0}
+                </p>
+                <p className="text-slate-600 mb-4">
+                  Click below to proceed with payment
+                </p>
+                <Button
+                  onClick={() => navigate("/student/payment")}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
                   Pay Now
                 </Button>
               </div>
@@ -768,12 +950,14 @@ export default function StudentApplicationPage() {
           </Card>
         );
 
-      case 'final_submission':
+      case "final_submission":
         return (
           <Card>
             <CardHeader>
               <CardTitle>Final Submission</CardTitle>
-              <CardDescription>Review and submit your application</CardDescription>
+              <CardDescription>
+                Review and submit your application
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
@@ -781,18 +965,24 @@ export default function StudentApplicationPage() {
                   <div className="flex items-center gap-3">
                     <CheckCircle className="h-6 w-6 text-green-600" />
                     <div>
-                      <p className="font-medium text-green-800 dark:text-green-400">Ready to Submit</p>
-                      <p className="text-sm text-green-600 dark:text-green-500">All required steps have been completed</p>
+                      <p className="font-medium text-green-800 dark:text-green-400">
+                        Ready to Submit
+                      </p>
+                      <p className="text-sm text-green-600 dark:text-green-500">
+                        All required steps have been completed
+                      </p>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="p-4 border rounded-lg">
                   <h4 className="font-medium mb-4">Application Summary</h4>
                   <dl className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <dt className="text-slate-500">Application Number</dt>
-                      <dd className="font-medium">{application.application_number}</dd>
+                      <dd className="font-medium">
+                        {application.application_number}
+                      </dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-slate-500">Name</dt>
@@ -804,10 +994,15 @@ export default function StudentApplicationPage() {
                     </div>
                   </dl>
                 </div>
-                
-                <Button onClick={submitApplication} disabled={saving} className="w-full bg-green-600 hover:bg-green-700" data-testid="submit-application-btn">
+
+                <Button
+                  onClick={submitApplication}
+                  disabled={saving}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  data-testid="submit-application-btn"
+                >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  {saving ? 'Submitting...' : 'Submit Application'}
+                  {saving ? "Submitting..." : "Submit Application"}
                 </Button>
               </div>
             </CardContent>
@@ -827,7 +1022,10 @@ export default function StudentApplicationPage() {
 
   return (
     <StudentLayout>
-      <div className="max-w-4xl mx-auto space-y-6" data-testid="student-application-page">
+      <div
+        className="max-w-4xl mx-auto space-y-6"
+        data-testid="student-application-page"
+      >
         {/* Progress Header */}
         <Card>
           <CardContent className="pt-6">
@@ -838,31 +1036,43 @@ export default function StudentApplicationPage() {
               </span>
             </div>
             <Progress value={progress} className="h-2" />
-            
+
             {/* Step Indicators */}
             <div className="flex justify-between mt-4">
               {steps.map((step, index) => {
-                const isCompleted = application?.completed_steps?.includes(step.step);
+                const isCompleted = application?.completed_steps?.includes(
+                  step.step,
+                );
                 const isCurrent = index === currentStepIndex;
-                
+
                 return (
                   <div
                     key={step.step}
                     className={`flex flex-col items-center cursor-pointer ${
-                      index <= currentStepIndex ? 'text-blue-600' : 'text-slate-400'
+                      index <= currentStepIndex
+                        ? "text-blue-600"
+                        : "text-slate-400"
                     }`}
                     onClick={() => setCurrentStepIndex(index)}
                   >
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      isCompleted 
-                        ? 'bg-green-600 text-white' 
-                        : isCurrent 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-slate-200 dark:bg-slate-700'
-                    }`}>
-                      {isCompleted ? <CheckCircle className="h-4 w-4" /> : index + 1}
+                    <div
+                      className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        isCompleted
+                          ? "bg-green-600 text-white"
+                          : isCurrent
+                            ? "bg-blue-600 text-white"
+                            : "bg-slate-200 dark:bg-slate-700"
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle className="h-4 w-4" />
+                      ) : (
+                        index + 1
+                      )}
                     </div>
-                    <span className="text-xs mt-1 hidden sm:block">{step.name}</span>
+                    <span className="text-xs mt-1 hidden sm:block">
+                      {step.name}
+                    </span>
                   </div>
                 );
               })}

@@ -15,7 +15,8 @@ import uuid
 import json
 import hmac
 import hashlib
-
+from utils.s3_service import upload_file_to_s3
+from fastapi import UploadFile, File, Form
 # Models
 from models.user import User, UserCreate, UserLogin, UserRole, Token, StudentLogin, UserUpdate
 from models.university import (
@@ -2957,70 +2958,69 @@ document_router = APIRouter(prefix="/documents", tags=["Documents"])
 
 @document_router.post("/upload")
 async def upload_document(
-    application_id: str = Body(...),
-    document_name: str = Body(...),
-    file_name: str = Body(...),
-    file_type: str = Body(...),
-    file_size: int = Body(...),
-    file_data: str = Body(...),  # Base64 encoded file data
+    application_id: str = Form(...),
+    document_name: str = Form(...),
+    file: UploadFile = File(...),
     current_user: dict = Depends(require_roles(UserRole.STUDENT))
 ):
-    """Upload a document for an application"""
-    import base64
-    
-    # Verify application belongs to student
+
+    # Verify application
     application = await db.applications.find_one({
         "id": application_id,
         "student_id": current_user["id"]
     })
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
-    
-    # Validate file type
+
     allowed_types = ["pdf", "jpg", "jpeg", "png"]
-    ext = file_type.lower().replace(".", "")
+
+    ext = file.filename.split(".")[-1].lower()
     if ext not in allowed_types:
-        raise HTTPException(status_code=400, detail=f"File type {ext} not allowed. Allowed: {', '.join(allowed_types)}")
-    
-    # Validate file size (max 5MB)
+        raise HTTPException(status_code=400, detail="File type not allowed")
+
+    # Read file
+    file_bytes = await file.read()
+
+    # Size validation
     max_size = 5 * 1024 * 1024
-    if file_size > max_size:
-        raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
-    
-    # Create upload directory if it doesn't exist
-    upload_dir = Path("/app/uploads/documents")
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    
+    if len(file_bytes) > max_size:
+        raise HTTPException(status_code=400, detail="File size exceeds 5MB")
+
     # Generate unique filename
     doc_id = str(uuid.uuid4())
-    safe_filename = f"{doc_id}_{file_name}"
-    file_path = upload_dir / safe_filename
-    
-    # Decode and save file
+    s3_filename = f"documents/{current_user['university_id']}/{doc_id}_{file.filename}"
+
+    # Upload to S3
     try:
-        file_bytes = base64.b64decode(file_data)
-        with open(file_path, "wb") as f:
-            f.write(file_bytes)
+        file_url = upload_file_to_s3(
+            file_bytes,
+            s3_filename,
+            file.content_type
+        )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to save file: {str(e)}")
-    
-    # Create document record
+        raise HTTPException(status_code=500, detail=f"S3 upload failed: {str(e)}")
+
+    # Save in DB
     doc = Document(
         id=doc_id,
         university_id=current_user["university_id"],
         student_id=current_user["id"],
         application_id=application_id,
         name=document_name,
-        file_name=file_name,
-        file_url=f"/uploads/documents/{safe_filename}",
+        file_name=file.filename,
+        file_url=file_url,
         file_type=ext,
-        file_size=file_size,
+        file_size=len(file_bytes),
         status=DocumentStatus.UPLOADED
     )
-    
+
     await db.documents.insert_one(doc.model_dump())
-    
-    return {"message": "Document uploaded successfully", "document_id": doc_id}
+
+    return {
+        "message": "Document uploaded successfully",
+        "document_id": doc_id,
+        "file_url": file_url
+    }
 
 
 @document_router.get("/application/{application_id}")
