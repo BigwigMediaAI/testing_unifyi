@@ -2981,16 +2981,13 @@ async def upload_document(
     # Read file
     file_bytes = await file.read()
 
-    # Size validation
     max_size = 5 * 1024 * 1024
     if len(file_bytes) > max_size:
         raise HTTPException(status_code=400, detail="File size exceeds 5MB")
 
-    # Generate unique filename
     doc_id = str(uuid.uuid4())
     s3_filename = f"documents/{current_user['university_id']}/{doc_id}_{file.filename}"
 
-    # Upload to S3
     try:
         file_url = upload_file_to_s3(
             file_bytes,
@@ -3000,7 +2997,7 @@ async def upload_document(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"S3 upload failed: {str(e)}")
 
-    # Save in DB
+    # Save document
     doc = Document(
         id=doc_id,
         university_id=current_user["university_id"],
@@ -3015,6 +3012,34 @@ async def upload_document(
     )
 
     await db.documents.insert_one(doc.model_dump())
+
+    # ==============================
+    # 🔥 AUTO MARK DOCUMENT STEP
+    # ==============================
+
+    university = await db.universities.find_one(
+        {"id": current_user["university_id"]}
+    )
+
+    required_docs = university.get("registration_config", {}).get("required_documents", [])
+
+    mandatory_docs = [d["name"] for d in required_docs if d.get("is_mandatory")]
+
+    uploaded_docs = await db.documents.find({
+        "application_id": application_id,
+        "student_id": current_user["id"]
+    }).to_list(length=None)
+
+    uploaded_names = [d["name"] for d in uploaded_docs]
+
+    if all(doc in uploaded_names for doc in mandatory_docs):
+        await db.applications.update_one(
+            {"id": application_id},
+            {
+                "$addToSet": {"completed_steps": "documents"},
+                "$set": {"current_step": "documents"}
+            }
+        )
 
     return {
         "message": "Document uploaded successfully",

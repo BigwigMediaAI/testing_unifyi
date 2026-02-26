@@ -1,13 +1,19 @@
-import { useState, useEffect } from 'react';
-import { StudentLayout } from '../../components/layouts/StudentLayout';
-import { documentAPI, applicationAPI } from '../../lib/api';
-import { formatDateTime } from '../../lib/utils';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Badge } from '../../components/ui/badge';
-import { Progress } from '../../components/ui/progress';
+import { useState, useEffect } from "react";
+import { StudentLayout } from "../../components/layouts/StudentLayout";
+import { documentAPI, applicationAPI } from "../../lib/api";
+import { formatDateTime } from "../../lib/utils";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Badge } from "../../components/ui/badge";
+import { Progress } from "../../components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -15,39 +21,83 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../../components/ui/dialog';
+} from "../../components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../components/ui/select';
-import { 
-  Upload, FileText, CheckCircle, XCircle, Clock, Eye, Trash2,
-  AlertCircle, File, Image, FileCheck, RefreshCw
-} from 'lucide-react';
-import { toast } from 'sonner';
+} from "../../components/ui/select";
+import {
+  Upload,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Eye,
+  Trash2,
+  AlertCircle,
+  File,
+  Image,
+  FileCheck,
+  RefreshCw,
+} from "lucide-react";
+import { toast } from "sonner";
 
 const DOC_STATUS = {
-  pending: { label: 'Pending Review', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400', icon: Clock },
-  verified: { label: 'Verified', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle },
-  rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400', icon: XCircle },
+  pending: {
+    label: "Pending Review",
+    color:
+      "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+    icon: Clock,
+  },
+  verified: {
+    label: "Verified",
+    color:
+      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+    icon: CheckCircle,
+  },
+  rejected: {
+    label: "Rejected",
+    color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    icon: XCircle,
+  },
 };
 
 const DOC_TYPES = [
-  { value: 'photo', label: 'Passport Photo', required: true },
-  { value: 'id_proof', label: 'ID Proof (Aadhar/PAN)', required: true },
-  { value: 'marksheet_10th', label: '10th Marksheet', required: true },
-  { value: 'marksheet_12th', label: '12th Marksheet', required: true },
-  { value: 'graduation_marksheet', label: 'Graduation Marksheet', required: false },
-  { value: 'transfer_certificate', label: 'Transfer Certificate', required: false },
-  { value: 'migration_certificate', label: 'Migration Certificate', required: false },
-  { value: 'character_certificate', label: 'Character Certificate', required: false },
-  { value: 'caste_certificate', label: 'Caste Certificate', required: false },
-  { value: 'income_certificate', label: 'Income Certificate', required: false },
-  { value: 'domicile_certificate', label: 'Domicile Certificate', required: false },
-  { value: 'other', label: 'Other Document', required: false },
+  { value: "photo", label: "Passport Photo", required: true },
+  { value: "id_proof", label: "ID Proof (Aadhar/PAN)", required: true },
+  { value: "marksheet_10th", label: "10th Marksheet", required: true },
+  { value: "marksheet_12th", label: "12th Marksheet", required: true },
+  {
+    value: "graduation_marksheet",
+    label: "Graduation Marksheet",
+    required: false,
+  },
+  {
+    value: "transfer_certificate",
+    label: "Transfer Certificate",
+    required: false,
+  },
+  {
+    value: "migration_certificate",
+    label: "Migration Certificate",
+    required: false,
+  },
+  {
+    value: "character_certificate",
+    label: "Character Certificate",
+    required: false,
+  },
+  { value: "caste_certificate", label: "Caste Certificate", required: false },
+  { value: "income_certificate", label: "Income Certificate", required: false },
+  {
+    value: "domicile_certificate",
+    label: "Domicile Certificate",
+    required: false,
+  },
+  { value: "other", label: "Other Document", required: false },
 ];
 
 export default function StudentDocumentsPage() {
@@ -59,9 +109,9 @@ export default function StudentDocumentsPage() {
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
   const [uploadData, setUploadData] = useState({
-    doc_type: '',
+    doc_type: "",
     file: null,
-    fileName: ''
+    fileName: "",
   });
 
   useEffect(() => {
@@ -73,17 +123,17 @@ export default function StudentDocumentsPage() {
       setLoading(true);
       const [appsRes, docsRes] = await Promise.all([
         applicationAPI.getMyApplications(),
-        documentAPI.getMyDocuments()
+        documentAPI.getMyDocuments(),
       ]);
-      
+
       const apps = appsRes.data.data || [];
       if (apps.length > 0) {
         setApplication(apps[0]);
       }
       setDocuments(docsRes.data.data || []);
     } catch (err) {
-      console.error('Failed to load data:', err);
-      toast.error('Failed to load documents');
+      console.error("Failed to load data:", err);
+      toast.error("Failed to load documents");
     } finally {
       setLoading(false);
     }
@@ -94,24 +144,29 @@ export default function StudentDocumentsPage() {
     if (file) {
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
+        toast.error("File size must be less than 5MB");
         return;
       }
-      
+
       // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "application/pdf",
+      ];
       if (!allowedTypes.includes(file.type)) {
-        toast.error('Only JPG, PNG, and PDF files are allowed');
+        toast.error("Only JPG, PNG, and PDF files are allowed");
         return;
       }
 
       // Convert to base64
       const reader = new FileReader();
       reader.onloadend = () => {
-        setUploadData(prev => ({
+        setUploadData((prev) => ({
           ...prev,
           file: reader.result,
-          fileName: file.name
+          fileName: file.name,
         }));
       };
       reader.readAsDataURL(file);
@@ -121,7 +176,7 @@ export default function StudentDocumentsPage() {
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!uploadData.doc_type || !uploadData.file || !application) {
-      toast.error('Please select document type and file');
+      toast.error("Please select document type and file");
       return;
     }
 
@@ -131,40 +186,46 @@ export default function StudentDocumentsPage() {
         application_id: application.id,
         doc_type: uploadData.doc_type,
         file_data: uploadData.file,
-        file_name: uploadData.fileName
+        file_name: uploadData.fileName,
       });
-      
-      toast.success('Document uploaded successfully');
+
+      toast.success("Document uploaded successfully");
       setShowUploadDialog(false);
-      setUploadData({ doc_type: '', file: null, fileName: '' });
+      setUploadData({ doc_type: "", file: null, fileName: "" });
       loadData();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to upload document');
+      toast.error(err.response?.data?.detail || "Failed to upload document");
     } finally {
       setUploading(false);
     }
   };
 
   const handleDelete = async (docId) => {
-    if (!window.confirm('Are you sure you want to delete this document?')) return;
-    
+    if (!window.confirm("Are you sure you want to delete this document?"))
+      return;
+
     try {
       await documentAPI.delete(docId);
-      toast.success('Document deleted');
+      toast.success("Document deleted");
       loadData();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to delete document');
+      toast.error(err.response?.data?.detail || "Failed to delete document");
     }
   };
 
   const getDocTypeLabel = (type) => {
-    return DOC_TYPES.find(d => d.value === type)?.label || type;
+    return DOC_TYPES.find((d) => d.value === type)?.label || type;
   };
 
-  const uploadedDocTypes = documents.map(d => d.doc_type);
-  const requiredDocs = DOC_TYPES.filter(d => d.required);
-  const uploadedRequiredCount = requiredDocs.filter(d => uploadedDocTypes.includes(d.value)).length;
-  const progress = requiredDocs.length > 0 ? (uploadedRequiredCount / requiredDocs.length) * 100 : 0;
+  const uploadedDocTypes = documents.map((d) => d.doc_type);
+  const requiredDocs = DOC_TYPES.filter((d) => d.required);
+  const uploadedRequiredCount = requiredDocs.filter((d) =>
+    uploadedDocTypes.includes(d.value),
+  ).length;
+  const progress =
+    requiredDocs.length > 0
+      ? (uploadedRequiredCount / requiredDocs.length) * 100
+      : 0;
 
   if (loading) {
     return (
@@ -182,13 +243,19 @@ export default function StudentDocumentsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">My Documents</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+              My Documents
+            </h1>
             <p className="text-slate-600 dark:text-slate-400 mt-1">
               Upload and manage your application documents
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={loadData} data-testid="refresh-docs">
+            <Button
+              variant="outline"
+              onClick={loadData}
+              data-testid="refresh-docs"
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
@@ -220,20 +287,23 @@ export default function StudentDocumentsPage() {
           <CardHeader>
             <CardTitle className="text-lg">Document Completion</CardTitle>
             <CardDescription>
-              {uploadedRequiredCount} of {requiredDocs.length} required documents uploaded
+              {uploadedRequiredCount} of {requiredDocs.length} required
+              documents uploaded
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Progress value={progress} className="h-3" />
             <div className="mt-4 flex flex-wrap gap-2">
-              {requiredDocs.map(doc => {
+              {requiredDocs.map((doc) => {
                 const isUploaded = uploadedDocTypes.includes(doc.value);
                 return (
                   <Badge
                     key={doc.value}
-                    className={isUploaded 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}
+                    className={
+                      isUploaded
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                    }
                   >
                     {isUploaded && <CheckCircle className="h-3 w-3 mr-1" />}
                     {doc.label}
@@ -271,13 +341,17 @@ export default function StudentDocumentsPage() {
               const status = DOC_STATUS[doc.status] || DOC_STATUS.pending;
               const StatusIcon = status.icon;
               const isImage = doc.file_name?.match(/\.(jpg|jpeg|png|gif)$/i);
-              
+
               return (
-                <Card key={doc.id} className="overflow-hidden" data-testid={`doc-card-${doc.id}`}>
+                <Card
+                  key={doc.id}
+                  className="overflow-hidden"
+                  data-testid={`doc-card-${doc.id}`}
+                >
                   <div className="aspect-video bg-slate-100 dark:bg-slate-800 flex items-center justify-center relative">
-                    {isImage && doc.url ? (
-                      <img 
-                        src={doc.url} 
+                    {isImage && doc.file_url ? (
+                      <img
+                        src={doc.file_url}
                         alt={doc.doc_type}
                         className="w-full h-full object-cover"
                       />
@@ -294,7 +368,7 @@ export default function StudentDocumentsPage() {
                       {getDocTypeLabel(doc.doc_type)}
                     </h4>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-                      {doc.file_name || 'Document'}
+                      {doc.file_name || "Document"}
                     </p>
                     <p className="text-xs text-slate-400 mb-3">
                       Uploaded: {formatDateTime(doc.created_at)}
@@ -305,7 +379,7 @@ export default function StudentDocumentsPage() {
                       </p>
                     )}
                     <div className="flex gap-2">
-                      {doc.url && (
+                      {doc.file_url && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -318,7 +392,7 @@ export default function StudentDocumentsPage() {
                           View
                         </Button>
                       )}
-                      {doc.status !== 'verified' && (
+                      {doc.status !== "verified" && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -352,20 +426,23 @@ export default function StudentDocumentsPage() {
                   <Label>Document Type</Label>
                   <Select
                     value={uploadData.doc_type}
-                    onValueChange={(value) => setUploadData(prev => ({ ...prev, doc_type: value }))}
+                    onValueChange={(value) =>
+                      setUploadData((prev) => ({ ...prev, doc_type: value }))
+                    }
                   >
                     <SelectTrigger data-testid="doc-type-select">
                       <SelectValue placeholder="Select document type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {DOC_TYPES.map(doc => (
-                        <SelectItem 
-                          key={doc.value} 
+                      {DOC_TYPES.map((doc) => (
+                        <SelectItem
+                          key={doc.value}
                           value={doc.value}
                           disabled={uploadedDocTypes.includes(doc.value)}
                         >
-                          {doc.label} {doc.required && '*'}
-                          {uploadedDocTypes.includes(doc.value) && ' (Already uploaded)'}
+                          {doc.label} {doc.required && "*"}
+                          {uploadedDocTypes.includes(doc.value) &&
+                            " (Already uploaded)"}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -382,7 +459,13 @@ export default function StudentDocumentsPage() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => setUploadData(prev => ({ ...prev, file: null, fileName: '' }))}
+                          onClick={() =>
+                            setUploadData((prev) => ({
+                              ...prev,
+                              file: null,
+                              fileName: "",
+                            }))
+                          }
                         >
                           <XCircle className="h-4 w-4" />
                         </Button>
@@ -406,16 +489,22 @@ export default function StudentDocumentsPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowUploadDialog(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowUploadDialog(false)}
+                >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  disabled={uploading || !uploadData.doc_type || !uploadData.file}
+                  disabled={
+                    uploading || !uploadData.doc_type || !uploadData.file
+                  }
                   className="bg-blue-600 hover:bg-blue-700"
                   data-testid="submit-upload-btn"
                 >
-                  {uploading ? 'Uploading...' : 'Upload'}
+                  {uploading ? "Uploading..." : "Upload"}
                 </Button>
               </DialogFooter>
             </form>
@@ -426,13 +515,15 @@ export default function StudentDocumentsPage() {
         <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
           <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
-              <DialogTitle>{previewDoc && getDocTypeLabel(previewDoc.doc_type)}</DialogTitle>
+              <DialogTitle>
+                {previewDoc && getDocTypeLabel(previewDoc.doc_type)}
+              </DialogTitle>
             </DialogHeader>
             <div className="flex items-center justify-center min-h-[400px] bg-slate-100 dark:bg-slate-800 rounded-lg">
-              {previewDoc?.url && (
-                previewDoc.file_name?.match(/\.pdf$/i) ? (
+              {previewDoc?.file_url &&
+                (previewDoc.file_name?.match(/\.pdf$/i) ? (
                   <iframe
-                    src={previewDoc.url}
+                    src={previewDoc.file_url}
                     className="w-full h-[500px]"
                     title="Document Preview"
                   />
@@ -442,8 +533,7 @@ export default function StudentDocumentsPage() {
                     alt={previewDoc.doc_type}
                     className="max-w-full max-h-[500px] object-contain"
                   />
-                )
-              )}
+                ))}
             </div>
           </DialogContent>
         </Dialog>
