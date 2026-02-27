@@ -29,6 +29,7 @@ import {
   MessageCircle,
   CalendarCheck,
   MailIcon,
+  Verified,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -82,6 +83,11 @@ const counsellingManagerMenu = [
     icon: MessageCircle,
     label: "Student Queries",
     path: "/counselling/queries",
+  },
+  {
+    icon: Verified,
+    label: "Document Verfication",
+    path: "/counselling/Verfication",
   },
 ];
 

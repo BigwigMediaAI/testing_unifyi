@@ -52,6 +52,7 @@ import Walkins from "./pages/student/StudentWalkins";
 import CounsellorWalkinsPage from "./pages/counselling/WalkinsPage";
 import ReferAFriend from "./pages/student/ReferAFriend";
 import Communications from "./pages/admin/Communications";
+import CounsellingDocumentVerificationPage from "./pages/counselling/CounsellingDocumentVerificationPage";
 
 // Protected Route Component
 function ProtectedRoute({ children, allowedRoles }) {
@@ -289,6 +290,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["counselling_manager", "counsellor"]}>
             <CounsellorQueriesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/counselling/Verfication"
+        element={
+          <ProtectedRoute allowedRoles={["counselling_manager"]}>
+            <CounsellingDocumentVerificationPage />
           </ProtectedRoute>
         }
       />

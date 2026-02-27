@@ -185,6 +185,18 @@ export default function StudentApplicationPage() {
   };
 
   const saveEducationalDetails = async () => {
+    const isValid = educationalDetails.every(
+      (edu) =>
+        edu.qualification &&
+        edu.board_university &&
+        edu.passing_year &&
+        edu.marks_percentage,
+    );
+
+    if (!isValid) {
+      toast.error("Please fill all educational details before saving.");
+      return;
+    }
     if (!application) return;
     setSaving(true);
     try {
@@ -195,9 +207,17 @@ export default function StudentApplicationPage() {
       toast.success("Educational details saved");
       await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to save");
-    } finally {
-      setSaving(false);
+      const detail = err.response?.data?.detail;
+
+      let message = "Failed to save";
+
+      if (typeof detail === "string") {
+        message = detail;
+      } else if (Array.isArray(detail)) {
+        message = detail.map((e) => e.msg).join(", ");
+      }
+
+      toast.error(message);
     }
   };
 
@@ -332,6 +352,7 @@ export default function StudentApplicationPage() {
     { name: "ID Proof", is_mandatory: true },
     { name: "Address Proof", is_mandatory: false },
   ];
+  const isApplicationSubmitted = application?.status === "submitted";
 
   if (loading) {
     return (
@@ -995,15 +1016,16 @@ export default function StudentApplicationPage() {
                   </dl>
                 </div>
 
-                <Button
-                  onClick={submitApplication}
-                  disabled={saving}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                  data-testid="submit-application-btn"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  {saving ? "Submitting..." : "Submit Application"}
-                </Button>
+                {!isApplicationSubmitted && (
+                  <Button
+                    onClick={submitApplication}
+                    disabled={saving}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {saving ? "Submitting..." : "Submit Application"}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1026,6 +1048,26 @@ export default function StudentApplicationPage() {
         className="max-w-4xl mx-auto space-y-6"
         data-testid="student-application-page"
       >
+        {application?.status && (
+          <Card className="border-2 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
+            <CardContent className="py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="font-medium text-green-800 dark:text-green-400">
+                    Application Submitted Successfully
+                  </p>
+                  <p className="text-sm text-green-600 dark:text-green-500">
+                    Your application is now under review.
+                  </p>
+                </div>
+              </div>
+              <Badge className="bg-green-600 text-white capitalize">
+                {application.status}
+              </Badge>
+            </CardContent>
+          </Card>
+        )}
         {/* Progress Header */}
         <Card>
           <CardContent className="pt-6">
@@ -1053,7 +1095,11 @@ export default function StudentApplicationPage() {
                         ? "text-blue-600"
                         : "text-slate-400"
                     }`}
-                    onClick={() => setCurrentStepIndex(index)}
+                    onClick={() => {
+                      if (!isApplicationSubmitted) {
+                        setCurrentStepIndex(index);
+                      }
+                    }}
                   >
                     <div
                       className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -1088,15 +1134,16 @@ export default function StudentApplicationPage() {
           <Button
             variant="outline"
             onClick={goPrev}
-            disabled={currentStepIndex === 0}
+            disabled={currentStepIndex === 0 || isApplicationSubmitted}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Previous
           </Button>
           <Button
             onClick={goNext}
-            disabled={currentStepIndex === steps.length - 1}
-            className="bg-blue-600 hover:bg-blue-700"
+            disabled={
+              currentStepIndex === steps.length - 1 || isApplicationSubmitted
+            }
           >
             Next
             <ArrowRight className="h-4 w-4 ml-2" />
