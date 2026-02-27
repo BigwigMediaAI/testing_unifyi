@@ -81,7 +81,7 @@ export default function RegistrationConfigPage() {
   const [discountEnabled, setDiscountEnabled] = useState(false);
   const [discountType, setDiscountType] = useState("fixed");
   const [discountAmount, setDiscountAmount] = useState(0);
-  const [discountValidTill, setDiscountValidTill] = useState("");
+  const [discountValidTill, setDiscountValidTill] = useState(null);
   const [paymentStage, setPaymentStage] = useState("after_application");
   const [refundAllowed, setRefundAllowed] = useState(false);
   const [testEligibility, setTestEligibility] = useState("after_registration");
@@ -111,8 +111,8 @@ export default function RegistrationConfigPage() {
         setDiscountAmount(regConfig.discount.amount || 0);
         setDiscountValidTill(
           regConfig.discount.valid_till
-            ? regConfig.discount.valid_till.slice(0, 10)
-            : "",
+            ? new Date(regConfig.discount.valid_till)
+            : null,
         );
       }
       if (
@@ -181,12 +181,12 @@ export default function RegistrationConfigPage() {
 
       toast.success("Configuration saved successfully");
     } catch (err) {
-      const backendMessage =
+      console.error(err.response?.data);
+      toast.error(
         err?.response?.data?.detail ||
-        err?.response?.data?.message ||
-        "Failed to save configuration";
-
-      toast.error(backendMessage);
+          err?.response?.data?.message ||
+          "Failed to save configuration",
+      );
     } finally {
       setSaving(false);
     }
@@ -529,7 +529,7 @@ export default function RegistrationConfigPage() {
                             className="w-full justify-start text-left font-normal"
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {discountValidTill
+                            {discountValidTill instanceof Date
                               ? format(discountValidTill, "PPP")
                               : "Pick a date"}
                           </Button>
