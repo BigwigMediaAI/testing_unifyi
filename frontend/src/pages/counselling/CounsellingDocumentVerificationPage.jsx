@@ -129,108 +129,167 @@ export default function CounsellingDocumentVerificationPage() {
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-bold">Student Document Verification</h1>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl p-6 text-white shadow">
+          <h1 className="text-2xl font-bold">Document Verification</h1>
+          <p className="text-indigo-100 mt-1">
+            Review and verify student application documents
+          </p>
+        </div>
 
-        {/* Students List */}
-        {loading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="animate-spin h-6 w-6 text-blue-600" />
-          </div>
-        ) : (
-          students.map((student) => (
-            <Card key={student.id}>
-              <CardHeader className="flex justify-between items-center">
-                <CardTitle>{student.name}</CardTitle>
-                <Button
-                  size="sm"
-                  onClick={() => handleViewDocuments(student)}
-                  disabled={!student.application_id}
-                >
-                  <Eye className="h-4 w-4 mr-1" />
-                  View Documents
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-slate-500">{student.email}</p>
-              </CardContent>
-            </Card>
-          ))
-        )}
+        {/* Main Layout */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* LEFT SIDE - Students List */}
+          <Card className="lg:col-span-1 h-fit">
+            <CardHeader>
+              <CardTitle>Students</CardTitle>
+            </CardHeader>
 
-        {/* Documents Section */}
-        {docLoading && (
-          <div className="flex justify-center py-6">
-            <Loader2 className="animate-spin h-6 w-6 text-blue-600" />
-          </div>
-        )}
-
-        {selectedApplication && (
-          <div className="space-y-4 mt-6">
-            <h2 className="text-xl font-semibold">
-              Documents for Application No:{" "}
-              {selectedApplication.application_number}
-            </h2>
-
-            {documents.length === 0 ? (
-              <p className="text-slate-500">No documents uploaded</p>
-            ) : (
-              documents.map((doc) => (
-                <Card key={doc.id}>
-                  <CardContent className="flex justify-between items-center py-4">
+            <CardContent className="space-y-3 max-h-[600px] overflow-y-auto">
+              {loading ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="animate-spin h-6 w-6 text-blue-600" />
+                </div>
+              ) : students.length === 0 ? (
+                <p className="text-slate-500 text-center py-6">
+                  No students found
+                </p>
+              ) : (
+                students.map((student) => (
+                  <div
+                    key={student.id}
+                    className={`flex items-center justify-between p-4 rounded-xl border transition ${
+                      selectedApplication?.id === student.application_id
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                        : "hover:bg-slate-50 dark:hover:bg-slate-800"
+                    }`}
+                  >
                     <div>
-                      <p className="font-medium">{doc.name}</p>
-                      <p className="text-sm text-slate-500">{doc.file_name}</p>
-                      <p className="text-xs text-slate-400">
-                        Status: {doc.status}
-                      </p>
-                      {doc.rejection_reason && (
-                        <p className="text-sm text-red-600">
-                          Reason: {doc.rejection_reason}
+                      <p className="font-medium">{student.name}</p>
+                      <p className="text-sm text-slate-500">{student.email}</p>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant={
+                        selectedApplication?.id === student.application_id
+                          ? "default"
+                          : "outline"
+                      }
+                      className={
+                        selectedApplication?.id === student.application_id
+                          ? "bg-blue-600 hover:bg-blue-700"
+                          : ""
+                      }
+                      onClick={() => handleViewDocuments(student)}
+                      disabled={!student.application_id}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View Docs
+                    </Button>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* RIGHT SIDE - Documents */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>
+                {selectedApplication
+                  ? `Application No: ${selectedApplication.application_number}`
+                  : "Select a student to view documents"}
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {docLoading ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="animate-spin h-6 w-6 text-blue-600" />
+                </div>
+              ) : selectedApplication ? (
+                documents.length === 0 ? (
+                  <p className="text-slate-500 text-center py-8">
+                    No documents uploaded
+                  </p>
+                ) : (
+                  documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="p-5 border rounded-xl flex flex-col md:flex-row md:items-center md:justify-between gap-4 hover:shadow-sm transition"
+                    >
+                      <div className="space-y-1">
+                        <p className="font-semibold">{doc.name}</p>
+                        <p className="text-sm text-slate-500">
+                          {doc.file_name}
                         </p>
-                      )}
-                    </div>
 
-                    <div className="flex gap-2">
-                      <a href={doc.file_url} target="_blank" rel="noreferrer">
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </a>
-
-                      {doc.status !== "verified" && (
-                        <Button
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={() => handleVerify(doc.id)}
-                          disabled={processing}
+                        <span
+                          className={`inline-block text-xs px-2 py-1 rounded-full ${
+                            doc.status === "verified"
+                              ? "bg-green-100 text-green-700"
+                              : doc.status === "rejected"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-yellow-100 text-yellow-700"
+                          }`}
                         >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Verify
-                        </Button>
-                      )}
+                          {doc.status}
+                        </span>
 
-                      {doc.status !== "rejected" && (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            setSelectedDoc(doc);
-                            setRejectDialog(true);
-                          }}
-                          disabled={processing}
-                        >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Reject
-                        </Button>
-                      )}
+                        {doc.rejection_reason && (
+                          <p className="text-sm text-red-600 mt-1">
+                            Reason: {doc.rejection_reason}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 flex-wrap">
+                        <a href={doc.file_url} target="_blank" rel="noreferrer">
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        </a>
+
+                        {doc.status !== "verified" && (
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => handleVerify(doc.id)}
+                            disabled={processing}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Verify
+                          </Button>
+                        )}
+
+                        {doc.status !== "rejected" && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              setSelectedDoc(doc);
+                              setRejectDialog(true);
+                            }}
+                            disabled={processing}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        )}
+                  ))
+                )
+              ) : (
+                <div className="text-center py-16 text-slate-400">
+                  Select a student from the left panel
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Reject Dialog */}
         <Dialog open={rejectDialog} onOpenChange={setRejectDialog}>
