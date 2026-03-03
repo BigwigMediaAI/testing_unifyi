@@ -79,11 +79,11 @@ const counsellingManagerMenu = [
   { icon: Users, label: "All Leads", path: "/counselling/leads" },
   { icon: BarChart3, label: "Lead Analytics", path: "/counselling/analytics" },
   { icon: UserCog, label: "Team Performance", path: "/counselling/team" },
-  {
-    icon: MessageCircle,
-    label: "Student Queries",
-    path: "/counselling/queries",
-  },
+  // {
+  //   icon: MessageCircle,
+  //   label: "Student Queries",
+  //   path: "/counselling/queries",
+  // },
   {
     icon: Verified,
     label: "Document Verfication",
