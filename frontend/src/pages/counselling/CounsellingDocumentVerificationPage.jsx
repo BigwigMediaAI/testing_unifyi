@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { AdminLayout } from "../../components/layouts/AdminLayout";
-import { leadAPI, applicationAPI, documentAPI } from "../../lib/api";
+import { applicationAPI, documentAPI } from "../../lib/api";
 import {
   Card,
   CardContent,
@@ -20,7 +20,7 @@ import { Loader2, Eye, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function CounsellingDocumentVerificationPage() {
-  const [students, setStudents] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,61 +32,53 @@ export default function CounsellingDocumentVerificationPage() {
   const [rejectionReason, setRejectionReason] = useState("");
 
   useEffect(() => {
-    loadStudents();
+    loadApplications();
   }, []);
 
-  const loadStudents = async () => {
+  // ✅ Load Submitted Applications Only
+  const loadApplications = async () => {
     try {
       setLoading(true);
-      const res = await leadAPI.list({
-        page: 1,
-        limit: 50,
-        stage: "application_started",
-      });
-      console.log(res);
-      setStudents(res.data.data || []);
+      const res = await applicationAPI.getSubmitted();
+      setApplications(res.data.data || []);
     } catch (err) {
-      toast.error("Failed to load students");
+      toast.error("Failed to load submitted applications");
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ Load Documents
   const loadDocuments = async (applicationId) => {
     try {
-      const docRes = await documentAPI.getApplicationDocuments(applicationId);
-      setDocuments(docRes.data.data || []);
+      const res = await documentAPI.getApplicationDocuments(applicationId);
+      setDocuments(res.data.data || []);
     } catch (err) {
       toast.error("Failed to load documents");
     }
   };
 
-  const handleViewDocuments = async (student) => {
-    if (!student.application_id) {
-      toast.error("Application not found for this student");
-      return;
-    }
-
+  // ✅ View Documents
+  const handleViewDocuments = async (application) => {
     try {
       setDocLoading(true);
-
-      const appRes = await applicationAPI.get(student.application_id);
-      setSelectedApplication(appRes.data);
-
-      await loadDocuments(student.application_id);
+      setSelectedApplication(application);
+      await loadDocuments(application.id);
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to load data");
+      toast.error("Failed to load application");
     } finally {
       setDocLoading(false);
     }
   };
 
+  // ✅ Verify Document
   const handleVerify = async (docId) => {
     try {
       setProcessing(true);
 
       await documentAPI.verify(docId, {
         status: "verified",
+        rejection_reason: null,
       });
 
       toast.success("Document verified successfully");
@@ -98,6 +90,7 @@ export default function CounsellingDocumentVerificationPage() {
     }
   };
 
+  // ✅ Reject Document
   const handleReject = async () => {
     if (!rejectionReason.trim()) {
       toast.error("Please enter rejection reason");
@@ -133,16 +126,15 @@ export default function CounsellingDocumentVerificationPage() {
         <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl p-6 text-white shadow">
           <h1 className="text-2xl font-bold">Document Verification</h1>
           <p className="text-indigo-100 mt-1">
-            Review and verify student application documents
+            Review and verify submitted student documents
           </p>
         </div>
 
-        {/* Main Layout */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* LEFT SIDE - Students List */}
+          {/* LEFT PANEL */}
           <Card className="lg:col-span-1 h-fit">
             <CardHeader>
-              <CardTitle>Students</CardTitle>
+              <CardTitle>Submitted Applications</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-3 max-h-[600px] overflow-y-auto">
@@ -150,39 +142,42 @@ export default function CounsellingDocumentVerificationPage() {
                 <div className="flex justify-center py-10">
                   <Loader2 className="animate-spin h-6 w-6 text-blue-600" />
                 </div>
-              ) : students.length === 0 ? (
+              ) : applications.length === 0 ? (
                 <p className="text-slate-500 text-center py-6">
-                  No students found
+                  No submitted applications found
                 </p>
               ) : (
-                students.map((student) => (
+                applications.map((application) => (
                   <div
-                    key={student.id}
+                    key={application.id}
                     className={`flex items-center justify-between p-4 rounded-xl border transition ${
-                      selectedApplication?.id === student.application_id
+                      selectedApplication?.id === application.id
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                         : "hover:bg-slate-50 dark:hover:bg-slate-800"
                     }`}
                   >
                     <div>
-                      <p className="font-medium">{student.name}</p>
-                      <p className="text-sm text-slate-500">{student.email}</p>
+                      <p className="font-medium">
+                        {application.basic_info?.name || "Student"}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {application.basic_info?.email}
+                      </p>
                     </div>
 
                     <Button
                       size="sm"
                       variant={
-                        selectedApplication?.id === student.application_id
+                        selectedApplication?.id === application.id
                           ? "default"
                           : "outline"
                       }
                       className={
-                        selectedApplication?.id === student.application_id
+                        selectedApplication?.id === application.id
                           ? "bg-blue-600 hover:bg-blue-700"
                           : ""
                       }
-                      onClick={() => handleViewDocuments(student)}
-                      disabled={!student.application_id}
+                      onClick={() => handleViewDocuments(application)}
                     >
                       <Eye className="h-4 w-4 mr-1" />
                       View Docs
@@ -193,13 +188,13 @@ export default function CounsellingDocumentVerificationPage() {
             </CardContent>
           </Card>
 
-          {/* RIGHT SIDE - Documents */}
+          {/* RIGHT PANEL */}
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>
                 {selectedApplication
                   ? `Application No: ${selectedApplication.application_number}`
-                  : "Select a student to view documents"}
+                  : "Select an application to view documents"}
               </CardTitle>
             </CardHeader>
 
@@ -217,7 +212,7 @@ export default function CounsellingDocumentVerificationPage() {
                   documents.map((doc) => (
                     <div
                       key={doc.id}
-                      className="p-5 border rounded-xl flex flex-col md:flex-row md:items-center md:justify-between gap-4 hover:shadow-sm transition"
+                      className="p-5 border rounded-xl flex flex-col md:flex-row md:items-center md:justify-between gap-4"
                     >
                       <div className="space-y-1">
                         <p className="font-semibold">{doc.name}</p>
@@ -284,7 +279,7 @@ export default function CounsellingDocumentVerificationPage() {
                 )
               ) : (
                 <div className="text-center py-16 text-slate-400">
-                  Select a student from the left panel
+                  Select an application from the left panel
                 </div>
               )}
             </CardContent>

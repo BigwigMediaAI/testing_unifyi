@@ -40,7 +40,7 @@ class Document(BaseModel):
 class DocumentConfig(BaseModel):
     name: str
     is_mandatory: bool = True
-    allowed_types: List[str] = ["pdf", "jpg", "jpeg", "png"]
+    allowed_types: List[str] = Field(default_factory=lambda: ["pdf", "jpg", "jpeg", "png"])
     max_size_mb: int = 5
     description: Optional[str] = None
 

@@ -85,7 +85,7 @@ export default function StudentApplicationPage() {
 
   // Documents
   const [documents, setDocuments] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState(null);
   const fileInputRef = useRef(null);
 
   const [creating, setCreating] = useState(false);
@@ -167,8 +167,38 @@ export default function StudentApplicationPage() {
 
   const steps = config?.steps || [];
   const currentStep = steps[currentStepIndex];
+  const completedSteps = application?.completed_steps || [];
+
+  const requiredDocuments = config?.config?.required_documents || [
+    { name: "10th Marksheet", is_mandatory: true },
+    { name: "12th Marksheet", is_mandatory: true },
+    { name: "Photo", is_mandatory: true },
+    { name: "Signature", is_mandatory: true },
+    { name: "ID Proof", is_mandatory: true },
+    { name: "Address Proof", is_mandatory: false },
+  ];
+
+  const mandatoryDocs = requiredDocuments.filter((d) => d.is_mandatory);
+
+  const allMandatoryUploaded = mandatoryDocs.every((doc) =>
+    documents.some((d) => d.name === doc.name),
+  );
+
+  const hasRejectedDocuments = documents.some(
+    (doc) => doc.status === "rejected",
+  );
+
+  const effectiveCompletedSteps =
+    application?.status === "revision_required"
+      ? completedSteps.filter((s) => s !== "final_submission")
+      : completedSteps;
+
   const progress =
-    steps.length > 0 ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
+    application?.status === "submitted" && !hasRejectedDocuments
+      ? 100
+      : steps.length > 0
+        ? (effectiveCompletedSteps.length / (steps.length - 1)) * 100
+        : 0;
 
   const saveBasicInfo = async () => {
     if (!application) return;
@@ -197,27 +227,23 @@ export default function StudentApplicationPage() {
       toast.error("Please fill all educational details before saving.");
       return;
     }
+
     if (!application) return;
+
     setSaving(true);
+
     try {
       await applicationAPI.updateEducationalDetails(
         application.id,
         educationalDetails,
       );
+
       toast.success("Educational details saved");
       await loadData();
     } catch (err) {
-      const detail = err.response?.data?.detail;
-
-      let message = "Failed to save";
-
-      if (typeof detail === "string") {
-        message = detail;
-      } else if (Array.isArray(detail)) {
-        message = detail.map((e) => e.msg).join(", ");
-      }
-
-      toast.error(message);
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -287,7 +313,7 @@ export default function StudentApplicationPage() {
       return;
     }
 
-    setUploading(true);
+    setUploading(documentName);
 
     try {
       const formData = new FormData();
@@ -311,7 +337,7 @@ export default function StudentApplicationPage() {
 
       toast.error(message);
     } finally {
-      setUploading(false);
+      setUploading(null);
     }
   };
 
@@ -344,15 +370,8 @@ export default function StudentApplicationPage() {
     { step: "final_submission", label: "Review & Submit", is_enabled: true },
   ];
 
-  const requiredDocuments = config?.config?.required_documents || [
-    { name: "10th Marksheet", is_mandatory: true },
-    { name: "12th Marksheet", is_mandatory: true },
-    { name: "Photo", is_mandatory: true },
-    { name: "Signature", is_mandatory: true },
-    { name: "ID Proof", is_mandatory: true },
-    { name: "Address Proof", is_mandatory: false },
-  ];
-  const isApplicationSubmitted = application?.status === "submitted";
+  const isApplicationLocked =
+    application?.status === "submitted" && !hasRejectedDocuments;
 
   if (loading) {
     return (
@@ -831,7 +850,7 @@ export default function StudentApplicationPage() {
                               className="hidden"
                               accept=".pdf,.jpg,.jpeg,.png"
                               onChange={(e) => handleFileSelect(e, reqDoc.name)}
-                              disabled={uploading}
+                              disabled={uploading === reqDoc.name}
                             />
                             <Button
                               variant="outline"
@@ -839,11 +858,13 @@ export default function StudentApplicationPage() {
                               onClick={() =>
                                 document.getElementById(`file-${index}`).click()
                               }
-                              disabled={uploading}
+                              disabled={uploading === reqDoc.name}
                               data-testid={`upload-${reqDoc.name.replace(/\s+/g, "-").toLowerCase()}`}
                             >
                               <Upload className="h-4 w-4 mr-2" />
-                              {uploading ? "Uploading..." : "Upload"}
+                              {uploading === reqDoc.name
+                                ? "Uploading..."
+                                : "Upload"}
                             </Button>
                           </>
                         )}
@@ -855,15 +876,32 @@ export default function StudentApplicationPage() {
                               id={`file-reupload-${index}`}
                               className="hidden"
                               accept=".pdf,.jpg,.jpeg,.png"
-                              onChange={(e) => {
-                                handleDeleteDocument(
-                                  uploadedDoc.id,
-                                  uploadedDoc.name,
-                                ).then(() => {
-                                  handleFileSelect(e, reqDoc.name);
-                                });
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+
+                                try {
+                                  const formData = new FormData();
+                                  formData.append("file", file);
+
+                                  await documentAPI.reupload(
+                                    uploadedDoc.id,
+                                    formData,
+                                  );
+
+                                  toast.success(
+                                    "Document re-uploaded successfully",
+                                  );
+                                  await loadData();
+                                  setCurrentStepIndex(
+                                    steps.findIndex(
+                                      (s) => s.step === "documents",
+                                    ),
+                                  );
+                                } catch (err) {
+                                  toast.error("Re-upload failed");
+                                }
                               }}
-                              disabled={uploading}
                             />
                             <Button
                               variant="outline"
@@ -873,7 +911,6 @@ export default function StudentApplicationPage() {
                                   .getElementById(`file-reupload-${index}`)
                                   .click()
                               }
-                              disabled={uploading}
                             >
                               Re-upload
                             </Button>
@@ -901,11 +938,18 @@ export default function StudentApplicationPage() {
                       </span>
                     </div>
                     <Button
-                      onClick={goNext}
-                      disabled={
-                        documents.length <
-                        requiredDocuments.filter((d) => d.is_mandatory).length
-                      }
+                      onClick={async () => {
+                        try {
+                          await applicationAPI.completeDocuments(
+                            application.id,
+                          ); // 👈 NEW
+                          await loadData(); // 👈 refresh application
+                          goNext();
+                        } catch (err) {
+                          toast.error("Failed to complete documents step");
+                        }
+                      }}
+                      disabled={!allMandatoryUploaded || hasRejectedDocuments}
                       className="bg-blue-600 hover:bg-blue-700"
                     >
                       Continue
@@ -1016,7 +1060,7 @@ export default function StudentApplicationPage() {
                   </dl>
                 </div>
 
-                {!isApplicationSubmitted && (
+                {!isApplicationLocked && (
                   <Button
                     onClick={submitApplication}
                     disabled={saving}
@@ -1048,7 +1092,7 @@ export default function StudentApplicationPage() {
         className="max-w-4xl mx-auto space-y-6"
         data-testid="student-application-page"
       >
-        {application?.status && (
+        {application?.status === "submitted" && (
           <Card className="border-2 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
             <CardContent className="py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1063,6 +1107,28 @@ export default function StudentApplicationPage() {
                 </div>
               </div>
               <Badge className="bg-green-600 text-white capitalize">
+                {application.status}
+              </Badge>
+            </CardContent>
+          </Card>
+        )}
+
+        {application?.status === "revision_required" && (
+          <Card className="border-2 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+            <CardContent className="py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <div>
+                  <p className="font-medium text-red-800 dark:text-red-400">
+                    Revision Required
+                  </p>
+                  <p className="text-sm text-red-600 dark:text-red-500">
+                    Some documents were rejected. Please re-upload them to
+                    continue.
+                  </p>
+                </div>
+              </div>
+              <Badge className="bg-red-600 text-white capitalize">
                 {application.status}
               </Badge>
             </CardContent>
@@ -1096,7 +1162,7 @@ export default function StudentApplicationPage() {
                         : "text-slate-400"
                     }`}
                     onClick={() => {
-                      if (!isApplicationSubmitted) {
+                      if (!isApplicationLocked) {
                         setCurrentStepIndex(index);
                       }
                     }}
@@ -1134,7 +1200,7 @@ export default function StudentApplicationPage() {
           <Button
             variant="outline"
             onClick={goPrev}
-            disabled={currentStepIndex === 0 || isApplicationSubmitted}
+            disabled={currentStepIndex === 0 || isApplicationLocked}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Previous
@@ -1142,7 +1208,7 @@ export default function StudentApplicationPage() {
           <Button
             onClick={goNext}
             disabled={
-              currentStepIndex === steps.length - 1 || isApplicationSubmitted
+              currentStepIndex === steps.length - 1 || isApplicationLocked
             }
           >
             Next

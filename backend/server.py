@@ -1955,25 +1955,6 @@ async def get_my_applications(
     return {"data": [serialize_doc(a) for a in applications]}
 
 
-@application_router.get("/{application_id}")
-async def get_application(
-    application_id: str,
-    current_user: dict = Depends(get_current_user)
-):
-    """Get application details"""
-    query = {"id": application_id}
-    
-    # Students can only see their own applications
-    if current_user["role"] == "student":
-        query["student_id"] = current_user["id"]
-    # Staff can see applications from their university
-    elif current_user.get("university_id"):
-        query["university_id"] = current_user["university_id"]
-    
-    application = await db.applications.find_one(query, {"_id": 0})
-    if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
-    return serialize_doc(application)
 
 
 @application_router.put("/{application_id}/basic-info")
@@ -2051,35 +2032,80 @@ async def submit_application(
     current_user: dict = Depends(require_roles(UserRole.STUDENT))
 ):
     """Final submission of application"""
+
     application = await db.applications.find_one({
         "id": application_id,
         "student_id": current_user["id"]
     })
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
-    
-    # Verify all required steps are completed
-    university = await db.universities.find_one({"id": application["university_id"]})
+
+    university = await db.universities.find_one(
+        {"id": application["university_id"]}
+    )
+    if not university:
+        raise HTTPException(status_code=404, detail="University not found")
+
     config = university.get("registration_config", {})
-    
+
+    # =========================
+    # 1️⃣ Validate Basic Steps
+    # =========================
     required_steps = ["basic_info"]
+
     if config.get("educational_details_enabled", True):
         required_steps.append("educational_details")
-    if config.get("documents_enabled", True):
-        required_steps.append("documents")
+
     if config.get("entrance_test_enabled", False):
         required_steps.append("entrance_test")
+
     if config.get("fee_enabled", False):
         required_steps.append("payment")
-    
+
     completed = application.get("completed_steps", [])
-    missing = [s for s in required_steps if s not in completed]
-    
-    if missing:
-        raise HTTPException(status_code=400, detail=f"Please complete: {', '.join(missing)}")
-    
-    completed.append("final_submission")
-    
+    missing_steps = [s for s in required_steps if s not in completed]
+
+    if missing_steps:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Please complete: {', '.join(missing_steps)}"
+        )
+
+    # =========================
+    # 2️⃣ Validate Documents
+    # =========================
+    if config.get("documents_enabled", True):
+
+        required_docs = config.get("required_documents", [])
+        mandatory_docs = [
+            d["name"] for d in required_docs if d.get("is_mandatory")
+        ]
+
+        uploaded_docs = await db.documents.find({
+            "application_id": application_id,
+            "student_id": current_user["id"],
+            "status": {"$ne": "rejected"}
+        }).to_list(length=None)
+
+        uploaded_names = [d["name"] for d in uploaded_docs]
+
+        missing_docs = [
+            doc for doc in mandatory_docs if doc not in uploaded_names
+        ]
+
+        if missing_docs:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Missing documents: {', '.join(missing_docs)}"
+            )
+
+    # =========================
+    # 3️⃣ Final Submission
+    # =========================
+
+    if "final_submission" not in completed:
+        completed.append("final_submission")
+
     await db.applications.update_one(
         {"id": application_id},
         {
@@ -2092,41 +2118,127 @@ async def submit_application(
             }
         }
     )
-    
-    # Update lead stage if exists
+
+    # =========================
+    # 4️⃣ Update Lead Stage
+    # =========================
     if application.get("lead_id"):
         await db.leads.update_one(
             {"id": application["lead_id"]},
             {"$set": {"stage": "documents_submitted"}}
         )
-    
-    # Send application status email
+
+    # =========================
+    # 5️⃣ Send Email
+    # =========================
     student = await db.users.find_one({"id": current_user["id"]})
+
     if student and student.get("email"):
         try:
             await email_service.send_application_status_email(
                 to_email=student["email"],
                 to_name=student.get("name", "Student"),
-                application_number=application.get("application_number", application_id[:8]),
+                application_number=application.get(
+                    "application_number",
+                    application_id[:8]
+                ),
                 status="submitted",
                 message="Your application has been successfully submitted. We will review it and get back to you soon."
             )
-            # Log the email
+
             email_log = EmailLog(
                 to_email=student["email"],
                 to_name=student.get("name"),
-                subject=f"Application Status Update",
+                subject="Application Status Update",
                 email_type=EmailType.APPLICATION_STATUS,
                 status=EmailStatus.SENT,
                 university_id=application["university_id"],
                 user_id=current_user["id"],
                 application_id=application_id
             )
+
             await db.email_logs.insert_one(email_log.model_dump())
+
         except Exception as e:
             logger.error(f"Failed to send application status email: {str(e)}")
+
+    updated_application = await db.applications.find_one(
+        {"id": application_id},
+        {"_id": 0}
+    )
+
+    return serialize_doc(updated_application)
+
+@application_router.put("/{application_id}/complete-documents")
+async def complete_documents_step(
+    application_id: str,
+    current_user: dict = Depends(require_roles(UserRole.STUDENT))
+):
+    application = await db.applications.find_one({
+        "id": application_id,
+        "student_id": current_user["id"]
+    })
+
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    completed_steps = application.get("completed_steps", [])
+
+    if "documents" not in completed_steps:
+        completed_steps.append("documents")
+
+    await db.applications.update_one(
+        {"id": application_id},
+        {
+            "$set": {
+                "completed_steps": completed_steps,
+                "current_step": "final_submission",
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+
+    return {"message": "Documents step completed"}
+
+@application_router.get("/submitted")
+async def get_submitted_applications(
+    current_user: dict = Depends(
+        require_roles(UserRole.UNIVERSITY_ADMIN, UserRole.COUNSELLING_MANAGER)
+    )
+):
+    applications = await db.applications.find(
+        {
+            "university_id": current_user["university_id"],
+            "status": "submitted",
+            "documents": {
+                "$elemMatch": {
+                    "status": {"$in": ["uploaded", "reuploaded"]}
+                }
+            }
+        },
+        {"_id": 0}
+    ).to_list(length=None)
+
+    return {"data": applications}
     
-    application = await db.applications.find_one({"id": application_id}, {"_id": 0})
+@application_router.get("/{application_id}")
+async def get_application(
+    application_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get application details"""
+    query = {"id": application_id}
+    
+    # Students can only see their own applications
+    if current_user["role"] == "student":
+        query["student_id"] = current_user["id"]
+    # Staff can see applications from their university
+    elif current_user.get("university_id"):
+        query["university_id"] = current_user["university_id"]
+    
+    application = await db.applications.find_one(query, {"_id": 0})
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
     return serialize_doc(application)
 
 
@@ -2964,7 +3076,7 @@ async def upload_document(
     current_user: dict = Depends(require_roles(UserRole.STUDENT))
 ):
 
-    # Verify application
+    # Verify application ownership
     application = await db.applications.find_one({
         "id": application_id,
         "student_id": current_user["id"]
@@ -2972,32 +3084,38 @@ async def upload_document(
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
 
-    allowed_types = ["pdf", "jpg", "jpeg", "png"]
+    # ❌ Prevent duplicate document name
+    existing_doc = await db.documents.find_one({
+        "application_id": application_id,
+        "student_id": current_user["id"],
+        "name": document_name
+    })
 
+    if existing_doc:
+        raise HTTPException(
+            status_code=400,
+            detail="Document already exists. Use re-upload if rejected."
+        )
+
+    allowed_types = ["pdf", "jpg", "jpeg", "png"]
     ext = file.filename.split(".")[-1].lower()
+
     if ext not in allowed_types:
         raise HTTPException(status_code=400, detail="File type not allowed")
 
-    # Read file
     file_bytes = await file.read()
 
-    max_size = 5 * 1024 * 1024
-    if len(file_bytes) > max_size:
+    if len(file_bytes) > 5 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File size exceeds 5MB")
 
     doc_id = str(uuid.uuid4())
     s3_filename = f"documents/{current_user['university_id']}/{doc_id}_{file.filename}"
 
     try:
-        file_url = upload_file_to_s3(
-            file_bytes,
-            s3_filename,
-            file.content_type
-        )
+        file_url = upload_file_to_s3(file_bytes, s3_filename, file.content_type)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"S3 upload failed: {str(e)}")
 
-    # Save document
     doc = Document(
         id=doc_id,
         university_id=current_user["university_id"],
@@ -3013,33 +3131,19 @@ async def upload_document(
 
     await db.documents.insert_one(doc.model_dump())
 
-    # ==============================
-    # 🔥 AUTO MARK DOCUMENT STEP
-    # ==============================
-
-    university = await db.universities.find_one(
-        {"id": current_user["university_id"]}
-    )
-
-    required_docs = university.get("registration_config", {}).get("required_documents", [])
-
-    mandatory_docs = [d["name"] for d in required_docs if d.get("is_mandatory")]
-
-    uploaded_docs = await db.documents.find({
-        "application_id": application_id,
-        "student_id": current_user["id"]
-    }).to_list(length=None)
-
-    uploaded_names = [d["name"] for d in uploaded_docs]
-
-    if all(doc in uploaded_names for doc in mandatory_docs):
-        await db.applications.update_one(
-            {"id": application_id},
-            {
-                "$addToSet": {"completed_steps": "documents"},
-                "$set": {"current_step": "documents"}
+    # ✅ Add document reference to application
+    await db.applications.update_one(
+        {"id": application_id},
+        {
+            "$addToSet": {
+                "documents": {
+                    "document_id": doc_id,
+                    "name": document_name,
+                    "status": DocumentStatus.UPLOADED.value
+                }
             }
-        )
+        }
+    )
 
     return {
         "message": "Document uploaded successfully",
@@ -3047,6 +3151,106 @@ async def upload_document(
         "file_url": file_url
     }
 
+# =====================================================
+# RE-UPLOAD REJECTED DOCUMENT
+# =====================================================
+
+@document_router.put("/{document_id}/reupload")
+async def reupload_document(
+    document_id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(require_roles(UserRole.STUDENT))
+):
+
+    doc = await db.documents.find_one({"id": document_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if doc["student_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if doc["status"] != "rejected":
+        raise HTTPException(
+            status_code=400,
+            detail="Only rejected documents can be re-uploaded"
+        )
+
+    ext = file.filename.split(".")[-1].lower()
+    allowed_types = ["pdf", "jpg", "jpeg", "png"]
+
+    if ext not in allowed_types:
+        raise HTTPException(status_code=400, detail="File type not allowed")
+
+    file_bytes = await file.read()
+
+    if len(file_bytes) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds 5MB")
+
+    s3_filename = f"documents/{doc['university_id']}/{document_id}_{file.filename}"
+
+    try:
+        file_url = upload_file_to_s3(file_bytes, s3_filename, file.content_type)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"S3 upload failed: {str(e)}")
+
+    await db.documents.update_one(
+        {"id": document_id},
+        {
+            "$set": {
+                "file_name": file.filename,
+                "file_url": file_url,
+                "file_type": ext,
+                "file_size": len(file_bytes),
+                "status": DocumentStatus.UPLOADED.value,
+                "rejection_reason": None,
+                "verified_by": None,
+                "verified_at": None,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+
+
+    # ------------------------------------------------
+    # Sync document status inside application collection
+    # ------------------------------------------------
+    await db.applications.update_one(
+        {
+            "id": doc["application_id"],
+            "documents.document_id": document_id
+        },
+        {
+            "$set": {
+                "documents.$.status": "uploaded"
+            }
+        }
+    )
+
+    # ------------------------------------------------
+    # Reset application status back to submitted
+    # ------------------------------------------------
+    # Check if any rejected documents still exist
+    remaining_rejected = await db.documents.count_documents({
+        "application_id": doc["application_id"],
+        "status": "rejected"
+    })
+
+    update_fields = {
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    if remaining_rejected == 0:
+        # All rejected documents fixed → resubmit
+        update_fields["status"] = "submitted"
+    else:
+        # Still some rejected docs → keep revision_required
+        update_fields["status"] = "revision_required"
+
+    await db.applications.update_one(
+        {"id": doc["application_id"]},
+        {"$set": update_fields}
+    )
+    return {"message": "Document re-uploaded successfully"}
 
 @document_router.get("/application/{application_id}")
 async def get_application_documents(
@@ -3095,38 +3299,82 @@ async def get_my_documents(current_user: dict = Depends(require_roles(UserRole.S
     return {"data": [serialize_doc(d) for d in documents]}
 
 
+# =====================================================
+# VERIFY OR REJECT DOCUMENT
+# =====================================================
+
 @document_router.put("/{document_id}/verify")
 async def verify_document(
     document_id: str,
     status: DocumentStatus = Body(...),
     rejection_reason: Optional[str] = Body(None),
-    current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN, UserRole.COUNSELLING_MANAGER))
+    current_user: dict = Depends(
+        require_roles(UserRole.UNIVERSITY_ADMIN, UserRole.COUNSELLING_MANAGER)
+    )
 ):
-    """Verify or reject a document"""
+
     doc = await db.documents.find_one({"id": document_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     if doc["university_id"] != current_user.get("university_id"):
         raise HTTPException(status_code=403, detail="Access denied")
-    
+
+    # ❌ Only allow VERIFIED or REJECTED
+    if status not in [DocumentStatus.VERIFIED, DocumentStatus.REJECTED]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid verification status"
+        )
+
+    if status == DocumentStatus.REJECTED and not rejection_reason:
+        raise HTTPException(
+            status_code=400,
+            detail="Rejection reason required"
+        )
+
     update_data = {
         "status": status.value,
         "verified_by": current_user["id"],
         "verified_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
     }
-    
-    if status == DocumentStatus.REJECTED and rejection_reason:
+
+    if status == DocumentStatus.REJECTED:
         update_data["rejection_reason"] = rejection_reason
-    
+    else:
+        update_data["rejection_reason"] = None
+
     await db.documents.update_one(
         {"id": document_id},
         {"$set": update_data}
     )
-    
-    return {"message": f"Document {status.value}"}
 
+    # ✅ Sync document status inside application collection
+    await db.applications.update_one(
+        {
+            "id": doc["application_id"],
+            "documents.document_id": document_id
+        },
+        {
+            "$set": {
+                "documents.$.status": status.value
+            }
+        }
+    )
+
+    if status == DocumentStatus.REJECTED:
+        await db.applications.update_one(
+            {"id": doc["application_id"]},
+            {
+                "$set": {
+                    "status": "revision_required",
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+
+    return {"message": f"Document {status.value}"}
 
 @document_router.delete("/{document_id}")
 async def delete_document(

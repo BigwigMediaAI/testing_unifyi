@@ -56,16 +56,10 @@ class Application(BaseModel):
     # Status Tracking
     status: ApplicationStatus = ApplicationStatus.DRAFT
     current_step: ApplicationStep = ApplicationStep.BASIC_INFO
-    completed_steps: List[ApplicationStep] = []
-    
-    # Basic Info (Step 1)
-    basic_info: Dict[str, Any] = {}
-    
-    # Educational Details (Step 2)
-    educational_details: List[EducationalDetail] = []
-    
-    # Documents (Step 3)
-    documents: List[str] = []  # Document IDs
+    completed_steps: List[ApplicationStep] = Field(default_factory=list)
+    basic_info: Dict[str, Any] = Field(default_factory=dict)
+    educational_details: List[EducationalDetail] = Field(default_factory=list)
+    documents: List[str] = Field(default_factory=list)
     
     # Test (Step 4)
     test_attempt_id: Optional[str] = None

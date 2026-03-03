@@ -113,6 +113,8 @@ export const applicationAPI = {
   updateEducationalDetails: (id, data) =>
     api.put(`/applications/${id}/educational-details`, data),
   submit: (id) => api.post(`/applications/${id}/submit`),
+  completeDocuments: (id) => api.put(`/applications/${id}/complete-documents`),
+  getSubmitted: () => api.get("/applications/submitted"),
 };
 
 // Test APIs
@@ -151,6 +153,17 @@ export const documentAPI = {
     const token = localStorage.getItem("unify-token");
 
     return api.post("/documents/upload", formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+
+  reupload: (documentId, formData) => {
+    const token = localStorage.getItem("unify-token");
+
+    return api.put(`/documents/${documentId}/reupload`, formData, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
