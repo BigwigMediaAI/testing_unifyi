@@ -66,8 +66,8 @@ const DOC_STATUS = {
 };
 
 const DOC_TYPES = [
-  { value: "photo", label: "Passport Photo", required: true },
-  { value: "id_proof", label: "ID Proof (Aadhar/PAN)", required: true },
+  { value: "photo", label: "Photograph", required: true },
+  { value: "id_proof", label: "ID Proof", required: true },
   { value: "marksheet_10th", label: "10th Marksheet", required: true },
   { value: "marksheet_12th", label: "12th Marksheet", required: true },
   {
@@ -217,14 +217,20 @@ export default function StudentDocumentsPage() {
     return DOC_TYPES.find((d) => d.value === type)?.label || type;
   };
 
-  const uploadedDocTypes = documents.map((d) => d.doc_type);
+  // Count only VERIFIED documents
+  const verifiedDocNames = documents
+    .filter((d) => d.status === "verified")
+    .map((d) => d.name);
+
   const requiredDocs = DOC_TYPES.filter((d) => d.required);
-  const uploadedRequiredCount = requiredDocs.filter((d) =>
-    uploadedDocTypes.includes(d.value),
+
+  const verifiedRequiredCount = requiredDocs.filter((d) =>
+    verifiedDocNames.includes(d.label),
   ).length;
+
   const progress =
     requiredDocs.length > 0
-      ? (uploadedRequiredCount / requiredDocs.length) * 100
+      ? (verifiedRequiredCount / requiredDocs.length) * 100
       : 0;
 
   if (loading) {
@@ -259,7 +265,7 @@ export default function StudentDocumentsPage() {
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
-            <Button
+            {/* <Button
               onClick={() => setShowUploadDialog(true)}
               className="bg-blue-600 hover:bg-blue-700"
               disabled={!application}
@@ -267,7 +273,7 @@ export default function StudentDocumentsPage() {
             >
               <Upload className="h-4 w-4 mr-2" />
               Upload Document
-            </Button>
+            </Button> */}
           </div>
         </div>
 
@@ -287,25 +293,26 @@ export default function StudentDocumentsPage() {
           <CardHeader>
             <CardTitle className="text-lg">Document Completion</CardTitle>
             <CardDescription>
-              {uploadedRequiredCount} of {requiredDocs.length} required
-              documents uploaded
+              {verifiedRequiredCount === requiredDocs.length
+                ? "All required documents verified"
+                : `${verifiedRequiredCount} of ${requiredDocs.length} required documents verified`}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Progress value={progress} className="h-3" />
             <div className="mt-4 flex flex-wrap gap-2">
               {requiredDocs.map((doc) => {
-                const isUploaded = uploadedDocTypes.includes(doc.value);
+                const isVerified = verifiedDocNames.includes(doc.label);
                 return (
                   <Badge
                     key={doc.value}
                     className={
-                      isUploaded
+                      isVerified
                         ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                         : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                     }
                   >
-                    {isUploaded && <CheckCircle className="h-3 w-3 mr-1" />}
+                    {isVerified && <CheckCircle className="h-3 w-3 mr-1" />}
                     {doc.label}
                   </Badge>
                 );
@@ -365,7 +372,7 @@ export default function StudentDocumentsPage() {
                   </div>
                   <CardContent className="p-4">
                     <h4 className="font-medium text-slate-900 dark:text-white mb-1">
-                      {getDocTypeLabel(doc.doc_type)}
+                      {getDocTypeLabel(doc.name)}
                     </h4>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
                       {doc.file_name || "Document"}
@@ -438,10 +445,10 @@ export default function StudentDocumentsPage() {
                         <SelectItem
                           key={doc.value}
                           value={doc.value}
-                          disabled={uploadedDocTypes.includes(doc.value)}
+                          disabled={verifiedDocNames.includes(doc.label)}
                         >
                           {doc.label} {doc.required && "*"}
-                          {uploadedDocTypes.includes(doc.value) &&
+                          {verifiedDocNames.includes(doc.value) &&
                             " (Already uploaded)"}
                         </SelectItem>
                       ))}
@@ -529,7 +536,7 @@ export default function StudentDocumentsPage() {
                   />
                 ) : (
                   <img
-                    src={previewDoc.url}
+                    src={previewDoc.file_url}
                     alt={previewDoc.doc_type}
                     className="max-w-full max-h-[500px] object-contain"
                   />
