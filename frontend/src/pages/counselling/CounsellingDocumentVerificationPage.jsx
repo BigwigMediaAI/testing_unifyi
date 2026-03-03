@@ -263,32 +263,32 @@ export default function CounsellingDocumentVerificationPage() {
                               </Button>
                             </a>
 
-                            {doc.status !== "verified" && (
-                              <Button
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700 rounded-lg"
-                                onClick={() => handleVerify(doc.id)}
-                                disabled={processing}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Verify
-                              </Button>
-                            )}
+                            {doc.status === "uploaded" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 rounded-lg"
+                                  onClick={() => handleVerify(doc.id)}
+                                  disabled={processing}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Verify
+                                </Button>
 
-                            {doc.status !== "rejected" && (
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                className="rounded-lg"
-                                onClick={() => {
-                                  setSelectedDoc(doc);
-                                  setRejectDialog(true);
-                                }}
-                                disabled={processing}
-                              >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Reject
-                              </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="rounded-lg"
+                                  onClick={() => {
+                                    setSelectedDoc(doc);
+                                    setRejectDialog(true);
+                                  }}
+                                  disabled={processing}
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </>
                             )}
                           </div>
                         </div>
