@@ -104,7 +104,6 @@ export default function CounsellingManagerDashboard() {
     try {
       const res = await counsellingManagerAPI.getDashboard();
       const data = res.data;
-
       setStats({
         totalLeads: data.total_leads || 0,
         newLeads: data.new_leads || 0,

@@ -3484,18 +3484,14 @@ async def counselling_manager_dashboard(
         "assigned_to": None
     })
 
-   # Converted leads (adjust status if needed)
-    converted_leads = await db.leads.count_documents({
+    # Converted leads (submitted applications)
+    converted_leads = await db.applications.count_documents({
         "university_id": university_id,
-        "status": "converted"
+        "status": "submitted"
     })
-
 
     # Pending leads
-    pending_leads = await db.leads.count_documents({
-        "university_id": university_id,
-        "status": {"$ne": "converted"}
-    })
+    pending_leads = total_leads - converted_leads
 
     # Conversion rate
     conversion_rate = (
@@ -3638,8 +3634,8 @@ async def counsellor_dashboard(
     converted_leads = await db.leads.count_documents({
         "university_id": university_id,
         "assigned_to": user_id,
-        "stage": {"$in": ["converted", "admission_confirmed"]}
-    })
+        "stage": {"$in": ["documents_submitted", "fee_paid", "admission_confirmed"]}
+        })
 
     # ----------------------------
     # DATE STRING (SAFE METHOD)
