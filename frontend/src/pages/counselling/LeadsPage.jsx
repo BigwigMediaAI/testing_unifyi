@@ -50,7 +50,7 @@ import {
 import { toast } from "sonner";
 import { ExportButton } from "../../components/ui/export-csv";
 
-export default function LeadsPage() {
+export default function LeadsPage({ filterFollowUps = false }) {
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [counsellors, setCounsellors] = useState([]);
@@ -79,7 +79,7 @@ export default function LeadsPage() {
 
   useEffect(() => {
     loadData();
-  }, [page, search, stageFilter]);
+  }, [page, search, stageFilter, filterFollowUps]);
 
   const loadData = async () => {
     try {
@@ -90,6 +90,7 @@ export default function LeadsPage() {
           limit: 20,
           search,
           stage: stageFilter || undefined,
+          follow_up: filterFollowUps ? true : undefined,
         }),
         universityAPI.listStaff("counsellor"),
       ]);
@@ -172,10 +173,13 @@ export default function LeadsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-              Leads
+              {filterFollowUps ? "Follow Ups" : "Leads"}
             </h1>
+
             <p className="text-slate-600 dark:text-slate-400 mt-1">
-              Manage and track your leads
+              {filterFollowUps
+                ? "Leads that require follow-up today"
+                : "Manage and track your leads"}
             </p>
           </div>
           <div className="flex gap-2">
@@ -189,14 +193,16 @@ export default function LeadsPage() {
                 Reassign ({selectedLeads.length})
               </Button>
             )}
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-              data-testid="create-lead-btn"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Lead
-            </Button>
+            {!filterFollowUps && (
+              <Button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+                data-testid="create-lead-btn"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Lead
+              </Button>
+            )}
           </div>
         </div>
 

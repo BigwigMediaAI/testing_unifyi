@@ -1606,38 +1606,68 @@ async def list_leads(
     stage: Optional[str] = None,
     assigned_to: Optional[str] = None,
     search: Optional[str] = None,
-    current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN, UserRole.COUNSELLING_MANAGER, UserRole.COUNSELLOR))
+    follow_up: Optional[bool] = Query(False),
+    current_user: dict = Depends(
+        require_roles(
+            UserRole.UNIVERSITY_ADMIN,
+            UserRole.COUNSELLING_MANAGER,
+            UserRole.COUNSELLOR
+        )
+    )
 ):
-    """List leads with filtering"""
+    """List leads with filtering and pagination"""
+
     query = {"university_id": current_user["university_id"]}
-    
-    # Counsellors can only see their assigned leads
-    if current_user["role"] == "counsellor":
+
+    # Counsellor can only see their leads
+    if current_user["role"] == UserRole.COUNSELLOR:
         query["assigned_to"] = current_user["id"]
     elif assigned_to:
         query["assigned_to"] = assigned_to
-    
+
+    # Stage filter
     if stage:
         query["stage"] = stage
-    
+
+    # Search filter
     if search:
         query["$or"] = [
             {"name": {"$regex": search, "$options": "i"}},
             {"email": {"$regex": search, "$options": "i"}},
-            {"phone": {"$regex": search, "$options": "i"}}
+            {"phone": {"$regex": search, "$options": "i"}},
         ]
-    
+
+    # ⭐ Follow-up filter
+    if follow_up:
+        query["follow_ups.0"] = {"$exists": True}
+
+    # Count total leads
     total = await db.leads.count_documents(query)
-    leads = await db.leads.find(query, {"_id": 0}).sort("created_at", -1).skip((page - 1) * limit).limit(limit).to_list(limit)
-    
+
+    # Pagination
+    skip = (page - 1) * limit
+    pages = (total + limit - 1) // limit
+
+    # Fetch leads
+    cursor = (
+        db.leads
+        .find(query, {"_id": 0})
+        .sort("created_at", -1)
+        .skip(skip)
+        .limit(limit)
+    )
+
+    leads = await cursor.to_list(length=limit)
+
     return {
         "data": [serialize_doc(l) for l in leads],
         "total": total,
         "page": page,
         "limit": limit,
-        "pages": (total + limit - 1) 
+        "pages": pages,
+        "has_next": page < pages,
+        "has_prev": page > 1
     }
-
 
 @lead_router.get("/{lead_id}")
 async def get_lead(
