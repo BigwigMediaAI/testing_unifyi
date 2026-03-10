@@ -1,23 +1,57 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { AdminLayout } from '../../components/layouts/AdminLayout';
-import { leadAPI } from '../../lib/api';
-import { formatDateTime, LEAD_STAGES } from '../../lib/utils';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { ScrollArea } from '../../components/ui/scroll-area';
-import { 
-  ArrowLeft, User, Mail, Phone, Calendar, Clock, MessageSquare, 
-  FileText, CreditCard, CheckCircle, AlertCircle, Plus, Edit2
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { AdminLayout } from "../../components/layouts/AdminLayout";
+import { leadAPI } from "../../lib/api";
+import { formatDateTime, LEAD_STAGES } from "../../lib/utils";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Textarea } from "../../components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../../components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
+import { ScrollArea } from "../../components/ui/scroll-area";
+import {
+  ArrowLeft,
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  Clock,
+  MessageSquare,
+  FileText,
+  CreditCard,
+  CheckCircle,
+  AlertCircle,
+  Plus,
+  Edit2,
+} from "lucide-react";
+import { toast } from "sonner";
 
 const timelineIcons = {
   created: FileText,
@@ -46,16 +80,16 @@ export default function LeadDetailsPage() {
   const navigate = useNavigate();
   const [lead, setLead] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   const [showStageModal, setShowStageModal] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
-  
-  const [newStage, setNewStage] = useState('');
-  const [stageNotes, setStageNotes] = useState('');
-  const [noteContent, setNoteContent] = useState('');
-  const [followUpDate, setFollowUpDate] = useState('');
-  const [followUpNotes, setFollowUpNotes] = useState('');
+
+  const [newStage, setNewStage] = useState("");
+  const [stageNotes, setStageNotes] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [followUpNotes, setFollowUpNotes] = useState("");
 
   useEffect(() => {
     loadLead();
@@ -67,8 +101,8 @@ export default function LeadDetailsPage() {
       setLead(response.data);
       setNewStage(response.data.stage);
     } catch (err) {
-      console.error('Failed to load lead:', err);
-      toast.error('Failed to load lead details');
+      console.error("Failed to load lead:", err);
+      toast.error("Failed to load lead details");
       navigate(-1);
     } finally {
       setLoading(false);
@@ -78,12 +112,12 @@ export default function LeadDetailsPage() {
   const handleUpdateStage = async () => {
     try {
       await leadAPI.updateStage(leadId, { stage: newStage, notes: stageNotes });
-      toast.success('Lead stage updated');
+      toast.success("Lead stage updated");
       setShowStageModal(false);
-      setStageNotes('');
+      setStageNotes("");
       loadLead();
     } catch (err) {
-      toast.error('Failed to update stage');
+      toast.error("Failed to update stage");
     }
   };
 
@@ -91,12 +125,12 @@ export default function LeadDetailsPage() {
     if (!noteContent.trim()) return;
     try {
       await leadAPI.addNote(leadId, noteContent);
-      toast.success('Note added');
+      toast.success("Note added");
       setShowNoteModal(false);
-      setNoteContent('');
+      setNoteContent("");
       loadLead();
     } catch (err) {
-      toast.error('Failed to add note');
+      toast.error("Failed to add note");
     }
   };
 
@@ -105,15 +139,25 @@ export default function LeadDetailsPage() {
     try {
       await leadAPI.addFollowUp(leadId, {
         scheduled_at: new Date(followUpDate).toISOString(),
-        notes: followUpNotes
+        notes: followUpNotes,
       });
-      toast.success('Follow-up scheduled');
+      toast.success("Follow-up scheduled");
       setShowFollowUpModal(false);
-      setFollowUpDate('');
-      setFollowUpNotes('');
+      setFollowUpDate("");
+      setFollowUpNotes("");
       loadLead();
     } catch (err) {
-      toast.error('Failed to schedule follow-up');
+      toast.error("Failed to schedule follow-up");
+    }
+  };
+
+  const handleCompleteFollowUp = async (followUpId) => {
+    try {
+      await leadAPI.completeFollowUp(leadId, followUpId);
+      toast.success("Follow-up marked as completed");
+      loadLead();
+    } catch (err) {
+      toast.error("Failed to update follow-up");
     }
   };
 
@@ -148,10 +192,17 @@ export default function LeadDetailsPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{lead.name}</h1>
-            <p className="text-slate-600 dark:text-slate-400">Lead Details & Timeline</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+              {lead.name}
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400">
+              Lead Details & Timeline
+            </p>
           </div>
-          <Badge className={LEAD_STAGES[lead.stage]?.color || 'bg-slate-100'} data-testid="lead-stage-badge">
+          <Badge
+            className={LEAD_STAGES[lead.stage]?.color || "bg-slate-100"}
+            data-testid="lead-stage-badge"
+          >
             {LEAD_STAGES[lead.stage]?.label || lead.stage}
           </Badge>
         </div>
@@ -184,7 +235,9 @@ export default function LeadDetailsPage() {
                     <User className="h-5 w-5 text-purple-600" />
                     <div>
                       <p className="text-sm text-slate-500">Assigned To</p>
-                      <p className="font-medium">{lead.assigned_to_name || 'Unassigned'}</p>
+                      <p className="font-medium">
+                        {lead.assigned_to_name || "Unassigned"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
@@ -205,15 +258,27 @@ export default function LeadDetailsPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => setShowStageModal(true)} variant="outline" data-testid="update-stage-btn">
+                  <Button
+                    onClick={() => setShowStageModal(true)}
+                    variant="outline"
+                    data-testid="update-stage-btn"
+                  >
                     <Edit2 className="h-4 w-4 mr-2" />
                     Update Stage
                   </Button>
-                  <Button onClick={() => setShowNoteModal(true)} variant="outline" data-testid="add-note-btn">
+                  <Button
+                    onClick={() => setShowNoteModal(true)}
+                    variant="outline"
+                    data-testid="add-note-btn"
+                  >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Add Note
                   </Button>
-                  <Button onClick={() => setShowFollowUpModal(true)} variant="outline" data-testid="add-followup-btn">
+                  <Button
+                    onClick={() => setShowFollowUpModal(true)}
+                    variant="outline"
+                    data-testid="add-followup-btn"
+                  >
                     <Calendar className="h-4 w-4 mr-2" />
                     Schedule Follow-up
                   </Button>
@@ -224,22 +289,34 @@ export default function LeadDetailsPage() {
             {/* Notes & Follow-ups */}
             <Tabs defaultValue="notes">
               <TabsList>
-                <TabsTrigger value="notes">Notes ({lead.notes?.length || 0})</TabsTrigger>
-                <TabsTrigger value="followups">Follow-ups ({lead.follow_ups?.length || 0})</TabsTrigger>
+                <TabsTrigger value="notes">
+                  Notes ({lead.notes?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="followups">
+                  Follow-ups ({lead.follow_ups?.length || 0})
+                </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="notes">
                 <Card>
                   <CardContent className="pt-6">
                     {lead.notes?.length === 0 ? (
-                      <p className="text-center text-slate-500 py-8">No notes yet</p>
+                      <p className="text-center text-slate-500 py-8">
+                        No notes yet
+                      </p>
                     ) : (
                       <div className="space-y-4">
                         {lead.notes?.map((note, index) => (
-                          <div key={index} className="p-4 rounded-lg border border-slate-200 dark:border-slate-800">
-                            <p className="text-slate-900 dark:text-white">{note.content}</p>
+                          <div
+                            key={index}
+                            className="p-4 rounded-lg border border-slate-200 dark:border-slate-800"
+                          >
+                            <p className="text-slate-900 dark:text-white">
+                              {note.content}
+                            </p>
                             <p className="text-sm text-slate-500 mt-2">
-                              {note.created_by_name} • {formatDateTime(note.created_at)}
+                              {note.created_by_name} •{" "}
+                              {formatDateTime(note.created_at)}
                             </p>
                           </div>
                         ))}
@@ -248,34 +325,65 @@ export default function LeadDetailsPage() {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="followups">
                 <Card>
                   <CardContent className="pt-6">
                     {lead.follow_ups?.length === 0 ? (
-                      <p className="text-center text-slate-500 py-8">No follow-ups scheduled</p>
+                      <p className="text-center text-slate-500 py-8">
+                        No follow-ups scheduled
+                      </p>
                     ) : (
                       <div className="space-y-4">
                         {lead.follow_ups?.map((followUp, index) => (
-                          <div 
-                            key={index} 
+                          <div
+                            key={index}
                             className={`p-4 rounded-lg border ${
-                              followUp.is_completed 
-                                ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' 
-                                : 'border-slate-200 dark:border-slate-800'
+                              followUp.is_completed
+                                ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20"
+                                : "border-slate-200 dark:border-slate-800"
                             }`}
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4 text-blue-600" />
-                                <span className="font-medium">{formatDateTime(followUp.scheduled_at)}</span>
+                                <span className="font-medium">
+                                  {formatDateTime(followUp.scheduled_at)}
+                                </span>
                               </div>
-                              <Badge className={followUp.is_completed ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
-                                {followUp.is_completed ? 'Completed' : 'Pending'}
+
+                              <Badge
+                                className={
+                                  followUp.is_completed
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-amber-100 text-amber-800"
+                                }
+                              >
+                                {followUp.is_completed
+                                  ? "Completed"
+                                  : "Pending"}
                               </Badge>
                             </div>
+
+                            {/* ⭐ ADD BUTTON HERE */}
+                            {!followUp.is_completed && (
+                              <div className="mt-3">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleCompleteFollowUp(followUp.id)
+                                  }
+                                >
+                                  Mark Completed
+                                </Button>
+                              </div>
+                            )}
+
                             {followUp.notes && (
-                              <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">{followUp.notes}</p>
+                              <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                                {followUp.notes}
+                              </p>
                             )}
                           </div>
                         ))}
@@ -303,7 +411,11 @@ export default function LeadDetailsPage() {
                     {lead.timeline?.map((entry, index) => {
                       const Icon = timelineIcons[entry.event_type] || FileText;
                       return (
-                        <div key={index} className="flex gap-3" data-testid={`timeline-${index}`}>
+                        <div
+                          key={index}
+                          className="flex gap-3"
+                          data-testid={`timeline-${index}`}
+                        >
                           <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                             <Icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                           </div>
@@ -312,7 +424,8 @@ export default function LeadDetailsPage() {
                               {entry.description}
                             </p>
                             <p className="text-xs text-slate-500">
-                              {entry.created_by_name && `${entry.created_by_name} • `}
+                              {entry.created_by_name &&
+                                `${entry.created_by_name} • `}
                               {formatDateTime(entry.created_at)}
                             </p>
                           </div>
@@ -341,7 +454,9 @@ export default function LeadDetailsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(LEAD_STAGES).map(([key, { label }]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -357,8 +472,17 @@ export default function LeadDetailsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowStageModal(false)}>Cancel</Button>
-              <Button onClick={handleUpdateStage} className="bg-blue-600 hover:bg-blue-700" data-testid="confirm-stage-btn">
+              <Button
+                variant="outline"
+                onClick={() => setShowStageModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateStage}
+                className="bg-blue-600 hover:bg-blue-700"
+                data-testid="confirm-stage-btn"
+              >
                 Update Stage
               </Button>
             </DialogFooter>
@@ -381,8 +505,15 @@ export default function LeadDetailsPage() {
               />
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowNoteModal(false)}>Cancel</Button>
-              <Button onClick={handleAddNote} className="bg-blue-600 hover:bg-blue-700" disabled={!noteContent.trim()} data-testid="confirm-note-btn">
+              <Button variant="outline" onClick={() => setShowNoteModal(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddNote}
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={!noteContent.trim()}
+                data-testid="confirm-note-btn"
+              >
                 Add Note
               </Button>
             </DialogFooter>
@@ -416,8 +547,18 @@ export default function LeadDetailsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowFollowUpModal(false)}>Cancel</Button>
-              <Button onClick={handleAddFollowUp} className="bg-blue-600 hover:bg-blue-700" disabled={!followUpDate} data-testid="confirm-followup-btn">
+              <Button
+                variant="outline"
+                onClick={() => setShowFollowUpModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddFollowUp}
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={!followUpDate}
+                data-testid="confirm-followup-btn"
+              >
                 Schedule
               </Button>
             </DialogFooter>

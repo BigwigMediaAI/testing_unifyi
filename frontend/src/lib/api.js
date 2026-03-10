@@ -97,6 +97,8 @@ export const leadAPI = {
   bulkReassign: (data) => api.post("/leads/bulk-reassign", data),
   addNote: (id, content) => api.post(`/leads/${id}/notes`, { content }),
   addFollowUp: (id, data) => api.post(`/leads/${id}/follow-ups`, data),
+  completeFollowUp: (leadId, followUpId) =>
+    api.put(`/leads/${leadId}/follow-ups/${followUpId}/complete`),
   importShiksha: (leads) =>
     api.post("/leads/import/shiksha", { source: "shiksha", leads }),
   importCollegedunia: (leads) =>

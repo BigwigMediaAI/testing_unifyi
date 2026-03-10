@@ -1947,6 +1947,59 @@ async def add_follow_up(
     return serialize_doc(follow_up.model_dump())
 
 
+@lead_router.put("/{lead_id}/follow-ups/{follow_up_id}/complete")
+async def complete_follow_up(
+    lead_id: str,
+    follow_up_id: str,
+    current_user: dict = Depends(
+        require_roles(
+            UserRole.UNIVERSITY_ADMIN,
+            UserRole.COUNSELLING_MANAGER,
+            UserRole.COUNSELLOR
+        )
+    )
+):
+    """Mark follow-up as completed"""
+
+    query = {
+        "id": lead_id,
+        "university_id": current_user["university_id"],
+        "follow_ups.id": follow_up_id
+    }
+
+    if current_user["role"] == "counsellor":
+        query["assigned_to"] = current_user["id"]
+
+    lead = await db.leads.find_one(query)
+
+    if not lead:
+        raise HTTPException(status_code=404, detail="Follow-up not found")
+
+    await db.leads.update_one(
+        {
+            "id": lead_id,
+            "follow_ups.id": follow_up_id
+        },
+        {
+            "$set": {
+                "follow_ups.$.is_completed": True,
+                "follow_ups.$.completed_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+
+    await add_timeline_entry(
+        lead_id=lead_id,
+        event_type=TimelineEventType.FOLLOW_UP_COMPLETED,
+        description="Follow-up marked as completed",
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        metadata={"follow_up_id": follow_up_id}
+    )
+
+    return {"message": "Follow-up completed"}
+
 # ============== APPLICATION ROUTES ==============
 
 @application_router.post("")
