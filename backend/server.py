@@ -2946,7 +2946,7 @@ async def student_register(
     # Update lead with application
     await db.leads.update_one(
         {"id": lead.id},
-        {"$set": {"application_id": application.id, "stage": "application_started"}}
+        {"$set": {"application_id": application.id, "stage": "new_lead"}}
     )
 
     # Generate token
@@ -3495,6 +3495,7 @@ async def counselling_manager_dashboard(
     current_user: dict = Depends(require_roles(UserRole.COUNSELLING_MANAGER))
 ):
     """Get counselling manager dashboard"""
+
     university_id = current_user["university_id"]
 
     # ==============================
@@ -3505,21 +3506,74 @@ async def counselling_manager_dashboard(
             "university_id": university_id,
             "role": "counsellor"
         },
-        {"_id": 0, "id": 1, "name": 1}
+        {
+            "_id": 0,
+            "id": 1,
+            "name": 1,
+            "email": 1,
+            "phone": 1,
+            "person_id": 1
+        }
     ).to_list(100)
 
     # ==============================
-    # Lead counts by counsellor
+    # Assigned leads per counsellor
     # ==============================
     pipeline = [
-        {"$match": {"university_id": university_id}},
-        {"$group": {"_id": "$assigned_to", "count": {"$sum": 1}}}
+        {
+            "$match": {
+                "university_id": university_id,
+                "assigned_to": {"$ne": None}
+            }
+        },
+        {
+            "$group": {
+                "_id": "$assigned_to",
+                "count": {"$sum": 1}
+            }
+        }
     ]
+
     leads_by_counsellor = await db.leads.aggregate(pipeline).to_list(100)
-    leads_map = {item["_id"]: item["count"] for item in leads_by_counsellor}
+
+    leads_map = {
+        str(item["_id"]): item["count"]
+        for item in leads_by_counsellor
+    }
 
     # ==============================
-    # Pending follow-ups (overdue)
+    # Converted leads per counsellor
+    # ==============================
+    pipeline = [
+        {
+            "$match": {
+                "university_id": university_id,
+                "stage": {
+                    "$in": [
+                        "documents_submitted",
+                        "fee_paid",
+                        "admission_confirmed"
+                    ]
+                }
+            }
+        },
+        {
+            "$group": {
+                "_id": "$assigned_to",
+                "count": {"$sum": 1}
+            }
+        }
+    ]
+
+    converted_by_counsellor = await db.leads.aggregate(pipeline).to_list(100)
+
+    converted_map = {
+        str(item["_id"]): item["count"]
+        for item in converted_by_counsellor
+    }
+
+    # ==============================
+    # Pending followups per counsellor
     # ==============================
     today = datetime.now(timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
@@ -3531,59 +3585,78 @@ async def counselling_manager_dashboard(
         {
             "$match": {
                 "follow_ups.is_completed": False,
-                "follow_ups.scheduled_at": {"$lte": today.isoformat()}
+                "follow_ups.scheduled_at": {"$lte": today}
             }
         },
-        {"$group": {"_id": "$assigned_to", "overdue_count": {"$sum": 1}}}
+        {
+            "$group": {
+                "_id": "$assigned_to",
+                "overdue_count": {"$sum": 1}
+            }
+        }
     ]
+
     overdue_by_counsellor = await db.leads.aggregate(pipeline).to_list(100)
-    overdue_map = {item["_id"]: item["overdue_count"] for item in overdue_by_counsellor}
+
+    overdue_map = {
+        str(item["_id"]): item["overdue_count"]
+        for item in overdue_by_counsellor
+    }
 
     # ==============================
-    # Build counsellor stats (FRONTEND MATCH)
+    # Build counsellor stats
     # ==============================
     counsellor_stats = []
+
     for c in counsellors:
+
+        counsellor_id = str(c["id"])
+
         counsellor_stats.append({
-            "id": c["id"],
-            "name": c["name"],
-            "assigned_leads": leads_map.get(c["id"], 0),
-            "converted": 0,  # (optional: update if you track conversions per counsellor)
-            "overdue_follow_ups": overdue_map.get(c["id"], 0)
+            "id": counsellor_id,
+            "name": c.get("name"),
+            "email": c.get("email"),
+            "phone": c.get("phone"),
+            "person_id": c.get("person_id"),
+
+            "assigned_leads": leads_map.get(counsellor_id, 0),
+            "converted": converted_map.get(counsellor_id, 0),
+            "overdue_follow_ups": overdue_map.get(counsellor_id, 0)
         })
 
     # ==============================
-    # GLOBAL STATS (NEW — REQUIRED)
+    # GLOBAL STATS
     # ==============================
 
-    # Total leads
     total_leads = await db.leads.count_documents({
         "university_id": university_id
     })
 
-    # Unassigned leads (your "new leads")
-    unassigned_leads = await db.leads.count_documents({
+    new_leads = await db.leads.count_documents({
         "university_id": university_id,
         "assigned_to": None
     })
 
-    # Converted leads (submitted applications)
-    converted_leads = await db.applications.count_documents({
+    converted_leads = await db.leads.count_documents({
         "university_id": university_id,
-        "status": "submitted"
+        "stage": {
+            "$in": [
+                "documents_submitted",
+                "fee_paid",
+                "admission_confirmed"
+            ]
+        }
     })
 
-    # Pending leads
     pending_leads = total_leads - converted_leads
 
-    # Conversion rate
     conversion_rate = (
         (converted_leads / total_leads) * 100
         if total_leads > 0 else 0
     )
 
     # ==============================
-    # Recent leads (NEW — REQUIRED)
+    # Recent leads
     # ==============================
     recent_leads = await db.leads.find(
         {"university_id": university_id},
@@ -3598,11 +3671,11 @@ async def counselling_manager_dashboard(
     ).sort("created_at", -1).limit(5).to_list(5)
 
     # ==============================
-    # FINAL RESPONSE (FRONTEND READY)
+    # Final response
     # ==============================
     return {
         "total_leads": total_leads,
-        "new_leads": unassigned_leads,
+        "new_leads": new_leads,
         "converted_leads": converted_leads,
         "pending_leads": pending_leads,
         "conversion_rate": conversion_rate,
@@ -3611,72 +3684,131 @@ async def counselling_manager_dashboard(
         "total_counsellors": len(counsellors)
     }
 
-
 @api_router.get("/counselling/lead-analytics")
 async def get_lead_analytics(
     current_user: dict = Depends(require_roles(UserRole.COUNSELLING_MANAGER, UserRole.UNIVERSITY_ADMIN))
 ):
-    """Get lead source analytics and stage distribution"""
+    """Get lead analytics including funnel and source distribution"""
+
     university_id = current_user["university_id"]
-    
+
+    # -----------------------------
     # Leads by source
+    # -----------------------------
     pipeline = [
         {"$match": {"university_id": university_id}},
         {"$group": {"_id": "$source", "count": {"$sum": 1}}}
     ]
     leads_by_source = await db.leads.aggregate(pipeline).to_list(20)
-    
+
+    # -----------------------------
     # Leads by stage
+    # -----------------------------
     pipeline = [
         {"$match": {"university_id": university_id}},
         {"$group": {"_id": "$stage", "count": {"$sum": 1}}}
     ]
     leads_by_stage = await db.leads.aggregate(pipeline).to_list(20)
-    
+
+    # -----------------------------
     # Conversion funnel
-    total = await db.leads.count_documents({"university_id": university_id})
+    # -----------------------------
+    total = await db.leads.count_documents({
+        "university_id": university_id
+    })
+
     contacted = await db.leads.count_documents({
         "university_id": university_id,
         "stage": {"$nin": ["new_lead"]}
     })
+
     interested = await db.leads.count_documents({
         "university_id": university_id,
-        "stage": {"$in": ["interested", "follow_up_scheduled", "application_started", 
-                         "documents_pending", "documents_submitted", "fee_pending", 
-                         "fee_paid", "admission_confirmed"]}
+        "stage": {
+            "$in": [
+                "interested",
+                "follow_up_scheduled",
+                "application_started",
+                "documents_pending",
+                "documents_submitted",
+                "fee_pending",
+                "fee_paid",
+                "admission_confirmed"
+            ]
+        }
     })
+
     applied = await db.leads.count_documents({
         "university_id": university_id,
-        "stage": {"$in": ["application_started", "documents_pending", "documents_submitted",
-                         "fee_pending", "fee_paid", "admission_confirmed"]}
+        "stage": {
+            "$in": [
+                "application_started",
+                "documents_pending",
+                "documents_submitted",
+                "fee_pending",
+                "fee_paid",
+                "admission_confirmed"
+            ]
+        }
     })
+
+    # ✅ FIXED CONVERSION LOGIC
     converted = await db.leads.count_documents({
         "university_id": university_id,
-        "stage": {"$in": ["admission_confirmed", "fee_paid"]}
+        "stage": {
+            "$in": [
+                "documents_submitted",
+                "fee_paid",
+                "admission_confirmed"
+            ]
+        }
     })
-    
+
+    # -----------------------------
     # Leads over time (last 30 days)
-    thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    # -----------------------------
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+
     pipeline = [
-        {"$match": {
-            "university_id": university_id,
-            "created_at": {"$gte": thirty_days_ago}
-        }},
-        {"$project": {
-            "date": {"$substr": ["$created_at", 0, 10]},
-            "source": 1
-        }},
-        {"$group": {
-            "_id": "$date",
-            "count": {"$sum": 1}
-        }},
+        {
+            "$match": {
+                "university_id": university_id,
+                "created_at": {"$gte": thirty_days_ago}
+            }
+        },
+        {
+            "$project": {
+                "date": {
+                    "$dateToString": {
+                        "format": "%Y-%m-%d",
+                        "date": "$created_at"
+                    }
+                }
+            }
+        },
+        {
+            "$group": {
+                "_id": "$date",
+                "count": {"$sum": 1}
+            }
+        },
         {"$sort": {"_id": 1}}
     ]
+
     leads_over_time = await db.leads.aggregate(pipeline).to_list(31)
-    
+
+    # -----------------------------
+    # Final response
+    # -----------------------------
     return {
-        "by_source": [{"source": item["_id"] or "unknown", "count": item["count"]} for item in leads_by_source],
-        "by_stage": [{"stage": item["_id"] or "unknown", "count": item["count"]} for item in leads_by_stage],
+        "by_source": [
+            {"source": item["_id"] or "unknown", "count": item["count"]}
+            for item in leads_by_source
+        ],
+        "by_stage": [
+            {"stage": item["_id"] or "unknown", "count": item["count"]}
+            for item in leads_by_stage
+        ],
         "funnel": {
             "total": total,
             "contacted": contacted,
@@ -3684,9 +3816,11 @@ async def get_lead_analytics(
             "applied": applied,
             "converted": converted
         },
-        "over_time": [{"date": item["_id"], "count": item["count"]} for item in leads_over_time]
+        "over_time": [
+            {"date": item["_id"], "count": item["count"]}
+            for item in leads_over_time
+        ]
     }
-
 
 # ============== COUNSELLOR ROUTES ==============
 
@@ -3711,7 +3845,7 @@ async def counsellor_dashboard(
     new_leads = await db.leads.count_documents({
         "university_id": university_id,
         "assigned_to": user_id,
-        "stage": {"$in": ["new_lead", "application_started"]}
+        "stage": {"$in": ["new_lead"]}
     })
 
     converted_leads = await db.leads.count_documents({
@@ -3822,6 +3956,7 @@ async def counsellor_dashboard(
         "recent_leads": recent_leads,
         "today_follow_ups": today_follow_ups
     }
+
 # ============== WEBHOOK ROUTES ==============
 
 @api_router.post("/webhooks/razorpay")
