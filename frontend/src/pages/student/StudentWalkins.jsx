@@ -51,27 +51,27 @@ export default function Walkins() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    const initializePage = async () => {
+      try {
+        setCheckingLead(true);
+
+        const leadRes = await authAPI.getMyLead();
+        const leadData = leadRes.data;
+
+        setLead(leadData);
+
+        if (leadData?.assigned_to) {
+          fetchWalkins();
+        }
+      } catch (err) {
+        toast.error("Failed to load profile data");
+      } finally {
+        setCheckingLead(false);
+      }
+    };
+
     initializePage();
   }, []);
-
-  const initializePage = async () => {
-    try {
-      setCheckingLead(true);
-
-      const leadRes = await authAPI.getMyLead();
-      const leadData = leadRes.data;
-
-      setLead(leadData);
-
-      if (leadData?.assigned_to) {
-        fetchWalkins();
-      }
-    } catch (err) {
-      toast.error("Failed to load profile data");
-    } finally {
-      setCheckingLead(false);
-    }
-  };
 
   const fetchWalkins = async () => {
     try {
