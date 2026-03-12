@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
-import jwt
+from jose import jwt
 import bcrypt
 import uuid
 import json
