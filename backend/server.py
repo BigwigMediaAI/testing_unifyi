@@ -4500,8 +4500,8 @@ async def update_walkin(
 
 
 # Include all routers
+# Include all routers
 api_router.include_router(auth_router)
-api_router.include_router(superadmin_router)
 api_router.include_router(university_router)
 api_router.include_router(lead_router)
 api_router.include_router(application_router)
@@ -4514,15 +4514,22 @@ api_router.include_router(query_router)
 api_router.include_router(walkin_router)
 api_router.include_router(superadmin_router)
 
-
-
+# -------- CORS CONFIG --------
+origins = [
+    "https://unifyicrm.com",
+    "http://unifyicrm.com",
+    "http://localhost:3000",
+    "https://testing-unifyi.vercel.app"
+]
 
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=origins,
+    allow_origin_regex="https://.*\\.vercel\\.app",  # allow Vercel preview deployments
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Attach API router
 app.include_router(api_router)
