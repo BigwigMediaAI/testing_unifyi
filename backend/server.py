@@ -4515,7 +4515,7 @@ api_router.include_router(walkin_router)
 api_router.include_router(superadmin_router)
 
 
-app.include_router(api_router)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -4524,3 +4524,5 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(api_router)
