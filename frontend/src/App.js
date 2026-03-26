@@ -54,6 +54,7 @@ import ReferAFriend from "./pages/student/ReferAFriend";
 import Communications from "./pages/admin/Communications";
 import CounsellingDocumentVerificationPage from "./pages/counselling/CounsellingDocumentVerificationPage";
 import TestConfig from "./pages/university/TestConfig";
+import TestResults from "./pages/counselling/TestResults";
 
 // Protected Route Component
 function ProtectedRoute({ children, allowedRoles }) {
@@ -307,6 +308,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["counselling_manager"]}>
             <CounsellingDocumentVerificationPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/counselling/test-results"
+        element={
+          <ProtectedRoute allowedRoles={["counselling_manager"]}>
+            <TestResults />
           </ProtectedRoute>
         }
       />

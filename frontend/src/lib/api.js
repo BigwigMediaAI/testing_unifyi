@@ -128,6 +128,8 @@ export const testAPI = {
   startTest: (applicationId) => api.post(`/tests/start/${applicationId}`),
   submitTest: (attemptId, responses) =>
     api.post(`/tests/submit/${attemptId}`, { responses }),
+  getResultsSummary: () => api.get("/tests/results/summary"),
+  getResultsList: () => api.get("/tests/results/list"),
 };
 
 // Payment APIs

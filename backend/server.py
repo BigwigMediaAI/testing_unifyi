@@ -2592,6 +2592,93 @@ async def submit_test(
     
     return serialize_doc(test_result.model_dump())
 
+@test_router.get("/results/summary")
+async def get_test_results_summary(
+    current_user: dict = Depends(
+        require_roles(UserRole.COUNSELLING_MANAGER, UserRole.UNIVERSITY_ADMIN)
+    )
+):
+    university_id = current_user["university_id"]
+
+    # 🔥 Join via test_attempts
+    attempts = await db.test_attempts.find(
+        {"university_id": university_id},
+        {"id": 1}
+    ).to_list(1000)
+
+    attempt_ids = [a["id"] for a in attempts]
+
+    results = await db.test_results.find(
+        {"attempt_id": {"$in": attempt_ids}}
+    ).to_list(1000)
+
+    total = len(results)
+    passed = len([r for r in results if r.get("passed")])
+    failed = total - passed
+
+    avg_percentage = (
+        sum(r.get("percentage", 0) for r in results) / total
+        if total > 0 else 0
+    )
+
+    return {
+        "total_attempts": total,
+        "passed": passed,
+        "failed": failed,
+        "average_percentage": round(avg_percentage, 2)
+    }
+
+
+@test_router.get("/results/list")
+async def get_test_results_list(
+    current_user: dict = Depends(
+        require_roles(UserRole.COUNSELLING_MANAGER, UserRole.UNIVERSITY_ADMIN)
+    )
+):
+    university_id = current_user["university_id"]
+
+    # 🔥 attempts
+    attempts = await db.test_attempts.find(
+        {"university_id": university_id}
+    ).to_list(1000)
+
+    attempt_map = {a["id"]: a for a in attempts}
+    attempt_ids = list(attempt_map.keys())
+
+    # 🔥 results
+    results = await db.test_results.find(
+        {"attempt_id": {"$in": attempt_ids}}
+    ).to_list(1000)
+
+    # 🔥 get students
+    student_ids = list(set([r["student_id"] for r in results]))
+
+    students = await db.users.find(
+        {"id": {"$in": student_ids}},
+        {"id": 1, "name": 1, "email": 1}
+    ).to_list(1000)
+
+    student_map = {s["id"]: s for s in students}
+
+    final_data = []
+
+    for r in results:
+        student = student_map.get(r["student_id"], {})
+
+        final_data.append({
+            "student_id": r["student_id"],
+            "student_name": student.get("name"),
+            "student_email": student.get("email"),
+
+            "score": r["marks_obtained"],
+            "total_marks": r["total_marks"],
+            "percentage": r["percentage"],
+            "passed": r["passed"],
+            "created_at": r["created_at"]
+        })
+
+    return {"data": final_data}
+
 
 # ============== PAYMENT ROUTES ==============
 

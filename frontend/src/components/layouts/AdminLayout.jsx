@@ -19,6 +19,7 @@ import {
   BookOpen,
   ClipboardList,
   UserCog,
+  Clipboard,
   Menu,
   X,
   Sun,
@@ -85,6 +86,7 @@ const counsellingManagerMenu = [
   { icon: Users, label: "All Leads", path: "/counselling/leads" },
   { icon: BarChart3, label: "Lead Analytics", path: "/counselling/analytics" },
   { icon: UserCog, label: "Team Performance", path: "/counselling/team" },
+  { icon: Clipboard, label: "Test Results", path: "/counselling/test-results" },
   // {
   //   icon: MessageCircle,
   //   label: "Student Queries",
