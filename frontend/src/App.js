@@ -53,6 +53,7 @@ import CounsellorWalkinsPage from "./pages/counselling/WalkinsPage";
 import ReferAFriend from "./pages/student/ReferAFriend";
 import Communications from "./pages/admin/Communications";
 import CounsellingDocumentVerificationPage from "./pages/counselling/CounsellingDocumentVerificationPage";
+import TestConfig from "./pages/university/TestConfig";
 
 // Protected Route Component
 function ProtectedRoute({ children, allowedRoles }) {
@@ -224,6 +225,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["university_admin"]}>
             <QuestionBankPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/university/test_configs"
+        element={
+          <ProtectedRoute allowedRoles={["university_admin"]}>
+            <TestConfig />
           </ProtectedRoute>
         }
       />

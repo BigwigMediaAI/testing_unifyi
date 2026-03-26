@@ -28,21 +28,21 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
-const studentMenu = [
-  { icon: Home, label: "Dashboard", path: "/student" },
-  { icon: FileText, label: "My Application", path: "/student/application" },
-  { icon: Upload, label: "Documents", path: "/student/documents" },
-  { icon: ClipboardCheck, label: "Entrance Test", path: "/student/test" },
-  { icon: CreditCard, label: "Fee Payment", path: "/student/payment" },
-  { icon: MessageCircle, label: "My Queries", path: "/student/queries" },
-  { icon: CalendarCheck, label: "Walkins", path: "/student/walkins" },
-  { icon: CalendarCheck, label: "Refer", path: "/student/refer" },
-  { icon: Building2, label: "Institution", path: "/student/institution" },
-];
+// const studentMenu = [
+//   { icon: Home, label: "Dashboard", path: "/student" },
+//   { icon: FileText, label: "My Application", path: "/student/application" },
+//   { icon: Upload, label: "Documents", path: "/student/documents" },
+//   { icon: ClipboardCheck, label: "Entrance Test", path: "/student/test" },
+//   { icon: CreditCard, label: "Fee Payment", path: "/student/payment" },
+//   { icon: MessageCircle, label: "My Queries", path: "/student/queries" },
+//   { icon: CalendarCheck, label: "Walkins", path: "/student/walkins" },
+//   { icon: CalendarCheck, label: "Refer", path: "/student/refer" },
+//   { icon: Building2, label: "Institution", path: "/student/institution" },
+// ];
 
 export function StudentLayout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, config } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -52,6 +52,54 @@ export function StudentLayout({ children }) {
     navigate("/student/login");
   };
 
+  const buildStudentMenu = () => {
+    const reg = config?.registration_config || {};
+
+    const menu = [
+      { icon: Home, label: "Dashboard", path: "/student" },
+      { icon: FileText, label: "My Application", path: "/student/application" },
+      { icon: Upload, label: "Documents", path: "/student/documents" },
+    ];
+
+    // ✅ Documents
+    if (reg.documents_enabled) {
+      menu.push({
+        icon: Upload,
+        label: "Documents",
+        path: "/student/documents",
+      });
+    }
+
+    // ✅ Test
+    if (reg.entrance_test_enabled) {
+      menu.push({
+        icon: ClipboardCheck,
+        label: "Entrance Test",
+        path: "/student/test",
+      });
+    }
+
+    // ✅ Fee
+    if (reg.fee_enabled) {
+      menu.push({
+        icon: CreditCard,
+        label: "Fee Payment",
+        path: "/student/payment",
+      });
+    }
+
+    // ✅ Always visible
+    menu.push(
+      { icon: MessageCircle, label: "My Queries", path: "/student/queries" },
+      { icon: CalendarCheck, label: "Walkins", path: "/student/walkins" },
+      { icon: CalendarCheck, label: "Refer", path: "/student/refer" },
+      { icon: Building2, label: "Institution", path: "/student/institution" },
+    );
+
+    return menu;
+  };
+
+  const studentMenu = buildStudentMenu();
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Header */}

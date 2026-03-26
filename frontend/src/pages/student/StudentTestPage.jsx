@@ -74,6 +74,7 @@ export default function StudentTestPage() {
 
   const loadTestData = async () => {
     try {
+      // 🔥 1. Get application
       const appsRes = await applicationAPI.getMyApplications();
       const apps = appsRes.data.data || [];
 
@@ -86,9 +87,19 @@ export default function StudentTestPage() {
       const app = apps[0];
       setApplication(app);
 
-      // Check if there's an existing attempt
+      // 🔥 2. Get test config
+      const configRes = await testAPI.listConfigs();
+      const config = configRes.data.data?.[0];
+
+      if (!config) {
+        toast.error("No test configuration found");
+        return;
+      }
+
+      setTestConfig(config);
+
+      // 🔥 3. Set status
       if (app.test_attempt_id) {
-        // Load existing attempt - in a real app, you'd have an API for this
         setTestStatus("submitted");
       } else {
         setTestStatus("not_started");
@@ -111,7 +122,11 @@ export default function StudentTestPage() {
 
       setAttempt(attemptData);
       setTestConfig(attemptData.config);
-      setTimeRemaining(attemptData.config?.duration_minutes * 60 || 3600);
+      setTimeRemaining(
+        (attemptData.config?.duration_minutes ||
+          testConfig?.duration_minutes ||
+          60) * 60,
+      );
       setTestStatus("in_progress");
 
       // Initialize responses
@@ -250,12 +265,16 @@ export default function StudentTestPage() {
                 <div className="text-center p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                   <Timer className="h-6 w-6 mx-auto mb-2 text-blue-600" />
                   <p className="text-sm text-slate-500">Duration</p>
-                  <p className="font-bold">60 Minutes</p>
+                  <p className="font-bold">
+                    {testConfig?.duration_minutes || 0} Minutes
+                  </p>
                 </div>
                 <div className="text-center p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                   <FileText className="h-6 w-6 mx-auto mb-2 text-green-600" />
                   <p className="text-sm text-slate-500">Questions</p>
-                  <p className="font-bold">50 Questions</p>
+                  <p className="font-bold">
+                    {testConfig?.total_questions || 0} Questions
+                  </p>
                 </div>
               </div>
 

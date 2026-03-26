@@ -30,6 +30,7 @@ import {
   CalendarCheck,
   MailIcon,
   Verified,
+  BookOpenCheck,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -70,6 +71,11 @@ const universityAdminMenu = [
     path: "/university/registration-config",
   },
   { icon: FileText, label: "Question Bank", path: "/university/questions" },
+  {
+    icon: BookOpenCheck,
+    label: "Entrance Test Config",
+    path: "/university/test_configs",
+  },
   { icon: CreditCard, label: "Payments", path: "/university/payments" },
   { icon: Settings, label: "Settings", path: "/university/settings" },
 ];

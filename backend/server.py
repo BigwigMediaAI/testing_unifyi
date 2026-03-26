@@ -2375,18 +2375,25 @@ async def create_test_config(
     config_data: TestConfigCreate,
     current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN))
 ):
-    """Create test configuration"""
+    # ✅ STEP 1: delete old configs
+    await db.test_configs.delete_many({
+        "university_id": current_user["university_id"]
+    })
+
+    # ✅ STEP 2: create new config
     config = TestConfig(
         university_id=current_user["university_id"],
         **config_data.model_dump()
     )
+
     await db.test_configs.insert_one(config.model_dump())
+
     return serialize_doc(config.model_dump())
 
 
 @test_router.get("/configs")
 async def list_test_configs(
-    current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN))
+    current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN,UserRole.STUDENT))
 ):
     """List test configurations"""
     configs = await db.test_configs.find(
