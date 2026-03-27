@@ -333,14 +333,14 @@ export default function StudentDocumentsPage() {
                 <p className="text-slate-500 dark:text-slate-400 mb-4">
                   Start by uploading your required documents.
                 </p>
-                <Button
+                {/* <Button
                   onClick={() => setShowUploadDialog(true)}
                   className="bg-blue-600 hover:bg-blue-700"
                   disabled={!application}
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   Upload First Document
-                </Button>
+                </Button> */}
               </CardContent>
             </Card>
           ) : (
