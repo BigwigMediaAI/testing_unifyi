@@ -977,12 +977,23 @@ export default function StudentApplicationPage() {
                 <p className="text-slate-600 mb-4">
                   You will be redirected to the test portal when ready
                 </p>
-                <Button
-                  onClick={() => navigate("/student/test")}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Start Test
-                </Button>
+                {application?.test_attempt_id ? (
+                  <div className="text-center">
+                    <p className="text-green-600 font-medium mb-2">
+                      ✅ Test Already Attempted
+                    </p>
+                    <Button variant="outline" disabled>
+                      Test Completed
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => navigate("/student/test")}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Start Test
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
