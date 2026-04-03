@@ -15,6 +15,7 @@ import uuid
 import json
 import hmac
 import hashlib
+import httpx
 from utils.s3_service import upload_file_to_s3
 from fastapi import UploadFile, File, Form
 # Models
@@ -52,6 +53,12 @@ from models.admin_communication import (
     AdminCommunicationCreate,
     AdminCommunicationHistoryResponse,
     CommunicationStatus,
+)
+from models.whatsapp import (
+    WhatsAppUser,
+    WhatsAppMessage,
+    WhatsAppMessageType,
+    WhatsAppSendRequest,
 )
 
 
@@ -92,7 +99,7 @@ student_router = APIRouter(prefix="/student", tags=["Student Portal"])
 email_router = APIRouter(prefix="/emails", tags=["Emails"])
 query_router = APIRouter(prefix="/queries", tags=["Student Queries"])
 walkin_router = APIRouter(prefix="/walkins", tags=["Walk-ins"])
-
+whatsapp_router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
 
 security = HTTPBearer()
 
@@ -195,6 +202,9 @@ async def startup_event():
     await db.walkins.create_index([("university_id", 1), ("lead_id", 1)])
     await db.walkins.create_index("student_id")
     await db.walkins.create_index("counsellor_id")
+    await db.whatsapp_users.create_index("phone", unique=True)
+    await db.whatsapp_users.create_index("updated_at")
+    await db.whatsapp_messages.create_index([("user", 1), ("created_at", 1)])
 
     
     # Create super admin if not exists
@@ -4591,6 +4601,146 @@ async def update_walkin(
 
     return {"message": "Walk-in updated successfully"}
 
+
+# ============== WHATSAPP ROUTES ==============
+
+
+async def _send_whatsapp_message(to: str, message: str):
+    phone_number_id = os.environ.get("PHONE_NUMBER_ID", "")
+    whatsapp_token = os.environ.get("WHATSAPP_TOKEN", "")
+    api_version = os.environ.get("WHATSAPP_API_VERSION", "v22.0")
+
+    if not phone_number_id or not whatsapp_token:
+        raise HTTPException(status_code=400, detail="WhatsApp not configured. Missing PHONE_NUMBER_ID or WHATSAPP_TOKEN")
+
+    url = f"https://graph.facebook.com/{api_version}/{phone_number_id}/messages"
+
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        response = await client.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {whatsapp_token}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "messaging_product": "whatsapp",
+                "to": to,
+                "type": "text",
+                "text": {"body": message},
+            },
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+@whatsapp_router.get("/webhook")
+async def verify_whatsapp_webhook(request: Request):
+    verify_token = os.environ.get("VERIFY_TOKEN") or os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
+    hub_mode = request.query_params.get("hub.mode")
+    hub_verify_token = request.query_params.get("hub.verify_token")
+    hub_challenge = request.query_params.get("hub.challenge")
+
+    if hub_mode and hub_verify_token == verify_token and hub_challenge:
+        return int(hub_challenge)
+
+    raise HTTPException(status_code=403, detail="Webhook verification failed")
+
+
+@whatsapp_router.post("/webhook")
+async def receive_whatsapp_webhook(request: Request):
+    try:
+        payload = await request.json()
+        message = (((payload.get("entry") or [{}])[0].get("changes") or [{}])[0].get("value") or {}).get("messages", [None])[0]
+
+        if message:
+            from_phone = message.get("from")
+            text = (message.get("text") or {}).get("body", "")
+
+            user = await db.whatsapp_users.find_one({"phone": from_phone})
+            if not user:
+                user_obj = WhatsAppUser(phone=from_phone, name=f"User {from_phone[-4:]}")
+                await db.whatsapp_users.insert_one(user_obj.model_dump())
+                user = user_obj.model_dump()
+            else:
+                await db.whatsapp_users.update_one(
+                    {"id": user["id"]},
+                    {"$set": {"updated_at": datetime.now(timezone.utc)}},
+                )
+
+            incoming = WhatsAppMessage(
+                user=user["id"],
+                from_number=from_phone,
+                text=text,
+                type=WhatsAppMessageType.INCOMING,
+            )
+            await db.whatsapp_messages.insert_one(incoming.model_dump())
+
+            try:
+                await _send_whatsapp_message(from_phone, "Hello 👋 How can we help you?")
+            except Exception as exc:
+                logger.error(f"WhatsApp auto reply failed: {str(exc)}")
+
+        return {"success": True}
+    except Exception as exc:
+        logger.exception("Webhook processing failed")
+        raise HTTPException(status_code=500, detail=f"Webhook processing failed: {str(exc)}")
+
+
+@whatsapp_router.get("/users")
+async def list_whatsapp_users(
+    current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN, UserRole.COUNSELLING_MANAGER, UserRole.COUNSELLOR))
+):
+    users = await db.whatsapp_users.find({}, {"_id": 0}).sort("updated_at", -1).to_list(length=1000)
+    users = [serialize_doc(u) for u in users]
+    return {"success": True, "message": "Users fetched", "data": users}
+
+
+@whatsapp_router.get("/messages/{user_id}")
+async def get_whatsapp_messages(
+    user_id: str,
+    current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN, UserRole.COUNSELLING_MANAGER, UserRole.COUNSELLOR))
+):
+    messages = await db.whatsapp_messages.find({"user": user_id}, {"_id": 0}).sort("created_at", 1).to_list(length=5000)
+    messages = [serialize_doc(m) for m in messages]
+    return {"success": True, "message": "Messages fetched", "data": messages}
+
+
+@whatsapp_router.post("/send")
+async def send_whatsapp_message(
+    payload: WhatsAppSendRequest,
+    current_user: dict = Depends(require_roles(UserRole.UNIVERSITY_ADMIN, UserRole.COUNSELLING_MANAGER, UserRole.COUNSELLOR))
+):
+    to = payload.to
+    message = payload.message
+
+    try:
+        try:
+            await _send_whatsapp_message(to, message)
+        except Exception as exc:
+            logger.error(f"WhatsApp provider error: {str(exc)}")
+
+        user = await db.whatsapp_users.find_one({"phone": to})
+        if not user:
+            user_obj = WhatsAppUser(phone=to, name=f"User {to[-4:]}")
+            await db.whatsapp_users.insert_one(user_obj.model_dump())
+            user = user_obj.model_dump()
+
+        outgoing = WhatsAppMessage(
+            user=user["id"],
+            from_number="business",
+            text=message,
+            type=WhatsAppMessageType.OUTGOING,
+        )
+        await db.whatsapp_messages.insert_one(outgoing.model_dump())
+        await db.whatsapp_users.update_one(
+            {"id": user["id"]},
+            {"$set": {"updated_at": datetime.now(timezone.utc)}},
+        )
+
+        return {"success": True, "message": "Message sent", "data": {"user_id": user["id"]}}
+    except Exception as exc:
+        logger.exception("Final send error")
+        raise HTTPException(status_code=500, detail=f"Send failed: {str(exc)}")
 
 
 # Include all routers
