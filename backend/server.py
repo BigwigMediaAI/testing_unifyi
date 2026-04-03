@@ -4641,7 +4641,7 @@ async def verify_whatsapp_webhook(request: Request):
     hub_challenge = request.query_params.get("hub.challenge")
 
     if hub_mode and hub_verify_token == verify_token and hub_challenge:
-        return int(hub_challenge)
+        return str(hub_challenge)
 
     raise HTTPException(status_code=403, detail="Webhook verification failed")
 
