@@ -4636,9 +4636,16 @@ async def _send_whatsapp_message(to: str, message: str):
 @whatsapp_router.get("/webhook")
 async def verify_whatsapp_webhook(request: Request):
     verify_token = os.environ.get("VERIFY_TOKEN") or os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
+    
     hub_mode = request.query_params.get("hub.mode")
     hub_verify_token = request.query_params.get("hub.verify_token")
     hub_challenge = request.query_params.get("hub.challenge")
+
+    # ✅ ADD THESE LINES HERE
+    print("VERIFY_TOKEN FROM ENV:", verify_token)
+    print("TOKEN FROM META:", hub_verify_token)
+    print("MODE:", hub_mode)
+    print("CHALLENGE:", hub_challenge)
 
     if hub_mode and hub_verify_token == verify_token and hub_challenge:
         return str(hub_challenge)
