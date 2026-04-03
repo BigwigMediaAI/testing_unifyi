@@ -4764,6 +4764,7 @@ api_router.include_router(email_router)
 api_router.include_router(query_router)
 api_router.include_router(walkin_router)
 api_router.include_router(superadmin_router)
+api_router.include_router(whatsapp_router)
 
 # -------- CORS CONFIG --------
 origins = [
@@ -4784,3 +4785,4 @@ app.add_middleware(
 
 # Attach API router
 app.include_router(api_router)
+
